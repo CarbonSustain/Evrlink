@@ -6,6 +6,7 @@ export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
   error?: string;
+  warning?: string;
 }
 
 // Use import.meta.env for Vite instead of process.env
@@ -496,81 +497,85 @@ export const getUserActivity = async (address: string) => {
  */
 export interface CreateGiftCardParams {
   backgroundId: string;
-  price: number;
+  price: number | string;
   message?: string;
 }
 
 export const createGiftCard = async (params: CreateGiftCardParams): Promise<ApiResponse<{ id: string }>> => {
   try {
-    // Skip health check - already bypassed
+    // Use the proper endpoint for gift card creation
+    const url = `${API_BASE_URL}/api/giftcard/create`;
     
-    // Use the exact endpoint provided by backend
-    const url = `${API_BASE_URL}/giftcard/create`;
-    console.log('Creating gift card at:', url, 'with params:', params);
+    // Get user wallet address from localStorage
+    const walletAddress = localStorage.getItem('walletAddress');
     
-    // Make a direct request without getAuthHeaders for testing
-    try {
-      // Use fetch directly for more control
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(params),
-      });
+    if (!walletAddress) {
+      console.warn('Wallet address not found in localStorage, checking from user object');
+      // Try to get wallet address from another source
+    }
+    
+    // Ensure price is a string as required by the contract
+    const requestData = {
+      backgroundId: params.backgroundId,
+      price: params.price.toString(), // Convert price to string for ethers.js
+      message: params.message
+    };
+    
+    console.log('Creating gift card at:', url, 'with params:', requestData);
+    
+    // Make a request with authentication
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify(requestData),
+    });
+    
+    console.log('Create gift card response status:', response.status);
+    
+    // Handle successful responses
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Gift card created successfully:', data);
       
-      console.log('Create gift card response:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-      
-      // Handle non-OK responses
-      if (!response.ok) {
-        let errorMessage = `Server returned ${response.status}: ${response.statusText}`;
-        
-        try {
-          // Try to get error details from response
-          const contentType = response.headers.get('content-type');
-          console.log('Error response content type:', contentType);
-          
-          if (contentType && contentType.includes('application/json')) {
-            const errorData = await response.json();
-            console.error('Error data:', errorData);
-            errorMessage = errorData.error || errorMessage;
-          } else {
-            // If not JSON, get text
-            const text = await response.text();
-            console.error('Error response text:', text);
-            if (text) errorMessage += ` - ${text}`;
-          }
-        } catch (parseError) {
-          console.error('Error parsing error response:', parseError);
-        }
-        
-        throw new Error(errorMessage);
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to create gift card');
       }
       
-      // Simple success case for testing
       return {
         success: true,
-        data: { id: 'test-id-123' }
-      };
-    } catch (fetchError) {
-      console.error('Fetch error during gift card creation:', fetchError);
-      // Return a success message for testing
-      return {
-        success: true,
-        data: { id: 'test-id-fallback' }
+        data: { 
+          id: data.giftCardId || data.id || '0'
+        }
       };
     }
+    
+    // Handle non-OK responses
+    let errorMessage = `Server returned ${response.status}: ${response.statusText}`;
+    
+    try {
+      // Try to get error details from response
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await response.json();
+        console.error('Error data:', errorData);
+        errorMessage = errorData.error || errorMessage;
+      } else {
+        // If not JSON, get text
+        const text = await response.text();
+        console.error('Error response text:', text);
+        if (text) errorMessage += ` - ${text}`;
+      }
+    } catch (parseError) {
+      console.error('Error parsing error response:', parseError);
+    }
+    
+    throw new Error(errorMessage);
   } catch (error: any) {
     console.error('Create gift card error:', error);
-    // Return a success message for testing
-    return {
-      success: true,
-      data: { id: 'test-id-fallback' }
-    };
+    throw error;
   }
 };
 
@@ -580,6 +585,7 @@ export const createGiftCard = async (params: CreateGiftCardParams): Promise<ApiR
 export interface TransferGiftCardParams {
   giftCardId: string;
   recipientAddress: string;
+  senderAddress?: string; // Optional sender address for auth fallback
 }
 
 /**
@@ -587,51 +593,125 @@ export interface TransferGiftCardParams {
  */
 export const transferGiftCard = async (params: TransferGiftCardParams): Promise<ApiResponse<any>> => {
   try {
-    // Skip health check - already bypassed
+    console.log('Transferring gift card:', params);
     
-    // Use the exact endpoint provided by backend
-    const url = `${API_BASE_URL}/giftcard/transfer`;
-    console.log('Transferring gift card at:', url, 'with params:', params);
+    // Get wallet address from localStorage
+    const walletAddress = localStorage.getItem('walletAddress') || 
+                          localStorage.getItem('userAddress') ||
+                          params.senderAddress;
     
-    // Make a direct request without getAuthHeaders for testing
-    try {
-      // Use fetch directly for more control
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          giftCardId: params.giftCardId,
-          recipientAddress: params.recipientAddress
-        }),
-      });
+    if (!walletAddress) {
+      console.warn('No wallet address found for sender');
+    }
+    
+    // Use the main endpoint for transfer
+    const response = await fetch(`${API_BASE_URL}/api/giftcard/${params.giftCardId}/transfer`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify({
+        recipientAddress: params.recipientAddress, // Backend expects recipientAddress
+        walletAddress // Include wallet address for auth fallback
+      }),
+    });
+
+    // Handle response
+    if (!response.ok) {
+      console.error(`Transfer gift card error: ${response.status} ${response.statusText}`);
       
-      console.log('Transfer gift card response:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
+      let errorMessage = `Server returned ${response.status}: ${response.statusText}`;
+      let errorData = null;
       
-      // For testing, return success regardless of response
-      return { 
-        success: true, 
-        data: { message: 'Gift card transferred successfully (simulated)' }
-      };
-    } catch (fetchError) {
-      console.error('Fetch error transferring gift card:', fetchError);
-      // Return success for testing
-      return { 
-        success: true, 
-        data: { message: 'Gift card transferred successfully (simulated after error)' }
+      try {
+        // Try to parse the error response
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } else {
+          const text = await response.text();
+          if (text) errorMessage += ` - ${text}`;
+        }
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+      }
+      
+      // If this is a column name error, we know how to handle it
+      if (errorMessage.includes("column") && 
+          (errorMessage.includes("created_at") || 
+           errorMessage.includes("does not exist"))) {
+        
+        console.log("Database column issue detected, using direct owner update approach");
+        
+        // Try the simplified update-owner endpoint that avoids timestamp issues
+        const updateResponse = await fetch(`${API_BASE_URL}/api/giftcard/${params.giftCardId}/update-owner`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: JSON.stringify({
+            newOwner: params.recipientAddress,
+            walletAddress // Include wallet address for auth fallback
+          }),
+        });
+        
+        if (updateResponse.ok) {
+          try {
+            const updateData = await updateResponse.json();
+            return {
+              success: true,
+              data: updateData,
+              warning: "Gift card transferred using alternative method"
+            };
+          } catch (updateJsonError) {
+            // Even if we can't parse the response, consider it a success
+            console.log("Transfer succeeded but couldn't parse response");
+            return {
+              success: true,
+              data: { message: "Gift card transferred successfully" },
+              warning: "Transfer succeeded but couldn't parse response"
+            };
+          }
+        } else {
+          console.error("Alternative transfer method also failed");
+          return {
+            success: false,
+            error: "All transfer methods failed. Please try again later."
+          };
+        }
+      }
+      
+      // Return the original error if we couldn't handle it
+      return {
+        success: false,
+        error: errorMessage
       };
     }
-  } catch (error: any) {
-    console.error('Transfer gift card error:', error);
-    // Return success for testing
+    
+    // Handle successful response
+    try {
+      const data = await response.json();
+      return {
+        success: true,
+        data
+      };
+    } catch (jsonError) {
+      console.error('Error parsing successful response JSON:', jsonError);
+      // Even if we can't parse the response, consider it a success
+      return {
+        success: true,
+        data: { message: "Gift card transferred successfully" },
+        warning: "Transfer succeeded but couldn't parse response details"
+      };
+    }
+  } catch (error) {
+    console.error("Gift card transfer error:", error);
     return {
-      success: true,
-      data: { message: 'Gift card transferred successfully (simulated after error)' }
+      success: false,
+      error: "Unable to transfer gift card. Please try again later."
     };
   }
 };
@@ -647,53 +727,54 @@ export interface GiftCardSecretResponse {
  */
 export const setGiftCardSecret = async ({ giftCardId, secret }: { giftCardId: string; secret: string }): Promise<GiftCardSecretResponse> => {
   try {
-    // Skip health check - already bypassed
-    
-    // Use the exact endpoint provided by backend
-    const url = `${API_BASE_URL}/giftcard/set-secret`;
+    // Use the correct endpoint with the proper path structure
+    const url = `${API_BASE_URL}/api/giftcard/${giftCardId}/set-secret`;
     console.log('Setting gift card secret at:', url, 'for gift card:', giftCardId);
     
-    // Make a direct request without getAuthHeaders for testing
-    try {
-      // Use fetch directly for more control
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        // Only send the required fields: giftCardId and secret
-        body: JSON.stringify({ 
-          giftCardId,
-          secret 
-        }),
-      });
-      
-      console.log('Set gift card secret response:', {
-        status: response.status,
-        statusText: response.statusText,
-      });
-      
-      // For testing, return success regardless of response
+    // Use fetch with authentication headers
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      // Only send the secret - giftCardId is in the URL
+      body: JSON.stringify({ 
+        secret 
+      }),
+    });
+    
+    console.log('Set gift card secret response status:', response.status);
+    
+    if (response.ok) {
+      const data = await response.json().catch(() => ({}));
       return { 
         success: true, 
-        data: { message: 'Secret set successfully (simulated)' } 
-      };
-    } catch (fetchError) {
-      console.error('Fetch error setting gift card secret:', fetchError);
-      // Return with error property to avoid type errors
-      return { 
-        success: false, 
-        error: 'Failed to set secret key (connection error)',
-        data: { message: 'Secret set failed (simulated after error)' }
+        data 
       };
     }
+    
+    // Handle errors
+    let errorMessage = `Server returned ${response.status}: ${response.statusText}`;
+    try {
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } else {
+        const text = await response.text();
+        if (text) errorMessage += ` - ${text}`;
+      }
+    } catch (parseError) {
+      console.error('Error parsing error response:', parseError);
+    }
+    
+    throw new Error(errorMessage);
   } catch (error) {
     console.error('Error setting gift card secret:', error);
-    // Return with error property to avoid type errors
     return { 
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to set gift card secret',
-      data: { message: 'Secret set failed (simulated after error)' }
+      error: error instanceof Error ? error.message : 'Failed to set gift card secret'
     };
   }
 };
@@ -702,46 +783,49 @@ export const setGiftCardSecret = async ({ giftCardId, secret }: { giftCardId: st
  * Claim a gift card using a secret key
  */
 export const claimGiftCard = async (giftCardId: string, secret: string) => {
-  // Use the exact endpoint provided by backend
-  const url = `${API_BASE_URL}/giftcard/claim`;
+  // Use the correct endpoint with proper path
+  const url = `${API_BASE_URL}/api/giftcard/${giftCardId}/claim`;
   console.log('Claiming gift card:', { giftCardId });
   
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
       body: JSON.stringify({
-        giftCardId,
         secret
       })
     });
     
     if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
-      console.error('Claim error:', {
-        status: response.status,
-        error: errorData
-      });
-      return {
-        success: false,
-        error: errorData?.error || `Failed to claim gift card (${response.status})`
-      };
+      let errorMessage = `Server returned ${response.status}: ${response.statusText}`;
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } else {
+          const text = await response.text();
+          if (text) errorMessage += ` - ${text}`;
+        }
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+      }
+      throw new Error(errorMessage);
     }
     
     const data = await response.json();
     return {
       success: true,
-      data: {
-        id: data.id,
-        currentOwner: data.currentOwner,
-        isClaimable: data.isClaimable
-      }
+      data
     };
   } catch (error) {
     console.error('Error claiming gift card:', error);
     return {
       success: false,
-      error: 'Failed to claim gift card. Please try again later.'
+      error: error instanceof Error ? error.message : 'Failed to claim gift card. Please try again later.'
     };
   }
 };
@@ -770,7 +854,7 @@ export const getUserGiftCards = async (address: string, options = {}): Promise<A
     });
     
     // Use the exact endpoint matching your backend
-    const url = `${API_BASE_URL}/giftcard/list?${queryParams.toString()}`;
+    const url = `${API_BASE_URL}/api/giftcard/list?${queryParams.toString()}`;
     console.log('Fetching user gift cards from:', url);
     
     try {
@@ -1017,98 +1101,43 @@ export const getUserTransactions = async (address: string): Promise<ApiResponse<
  */
 export const getGiftCardDetails = async (giftCardId: string): Promise<ApiResponse<any>> => {
   try {
-    const url = `${API_BASE_URL}/giftcard/${giftCardId}`;
+    const url = `${API_BASE_URL}/api/giftcard/${giftCardId}`;
     console.log('Fetching gift card details from:', url);
     
-    try {
-      const response = await fetchWithRetry(url, {
-        headers: getAuthHeaders()
-      });
-      
-      console.log('Gift card details response:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Failed to fetch gift card details:', errorText);
-        
-        // For development, return mock data
-        return {
-          success: true,
-          data: {
-            id: giftCardId,
-            backgroundId: 'bg-001',
-            owner: '0x1234567890123456789012345678901234567890',
-            price: '0.05',
-            status: 'available',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            imageURI: 'https://placehold.co/400x300?text=Gift+Card',
-            hasSecretKey: true,
-            message: 'Happy birthday! Hope you like this gift card.',
-            background: {
-              id: 'bg-001',
-              category: 'celebration',
-              artistAddress: '0x1234567890123456789012345678901234567890',
-              imageURI: 'https://placehold.co/400x300?text=Background'
-            },
-            secretKey: 'SECRET123'
-          }
-        };
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
       }
-      
-      // Parse the actual response
-      const data = await response.json();
-      
-      // Format the response data
-      const formattedData = {
-        id: data.id,
-        backgroundId: data.backgroundId,
-        owner: data.currentOwner,
-        price: data.price.toString(),
-        status: data.status,
-        createdAt: data.createdAt,
-        updatedAt: data.updatedAt,
-        imageURI: data.background?.imageURI || 'https://placehold.co/400x300?text=Gift+Card',
-        hasSecretKey: !!data.secretKeyHash,
-        message: data.message || '',
-        background: data.background || null,
-        secretKey: data.secretKey || null
-      };
-      
-      return {
-        success: true,
-        data: formattedData
-      };
-    } catch (error) {
-      console.error('Error fetching gift card details:', error);
-      
-      // Fallback to mock data for development
-      console.log('Falling back to mock data for gift card details');
-      return {
-        success: true,
-        data: {
-          id: giftCardId,
-          backgroundId: 'bg-001',
-          owner: '0x1234567890123456789012345678901234567890',
-          price: '0.05',
-          status: 'available',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          imageURI: 'https://placehold.co/400x300?text=Gift+Card',
-          hasSecretKey: true,
-          message: 'Happy birthday! Hope you like this gift card.',
-          background: {
-            id: 'bg-001',
-            category: 'celebration',
-            artistAddress: '0x1234567890123456789012345678901234567890',
-            imageURI: 'https://placehold.co/400x300?text=Background'
-          },
-          secretKey: 'SECRET123'
+    });
+    
+    console.log('Gift card details response status:', response.status);
+    
+    if (!response.ok) {
+      let errorMessage = `Server returned ${response.status}: ${response.statusText}`;
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } else {
+          const text = await response.text();
+          if (text) errorMessage += ` - ${text}`;
         }
-      };
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+      }
+      throw new Error(errorMessage);
     }
+    
+    // Parse the actual response
+    const data = await response.json();
+    return {
+      success: true,
+      data: data
+    };
   } catch (error) {
     console.error('Error in getGiftCardDetails:', error);
-    return { success: false, error: 'Failed to fetch gift card details' };
+    throw error;
   }
 }; 

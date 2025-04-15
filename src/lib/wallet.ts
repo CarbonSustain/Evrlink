@@ -81,12 +81,6 @@ export const connectMetaMask = async (): Promise<string> => {
     throw new Error('Please install MetaMask to continue.');
   }
 
-  // Force Coinbase Wallet
-  if (walletType === 'coinbase' && !window.ethereum.isCoinbaseWallet) {
-    window.open('https://www.coinbase.com/wallet', '_blank');
-    throw new Error('Please install Coinbase Wallet to continue.');
-  }
-
   // Clean up Web3Auth if it exists to prevent interference
   if (currentWeb3AuthInstance) {
     try {

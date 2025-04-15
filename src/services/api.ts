@@ -174,7 +174,7 @@ export const createGiftCard = async (data: {
   message: string;
 }): Promise<any> => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/api/gift-cards/create`, data, {
+    const response = await axios.post(`${API_BASE_URL}/api/giftcard/create`, data, {
       headers: getAuthHeaders(),
     });
     return response.data;
@@ -524,20 +524,30 @@ export const getRecentTransactions = async (limit: number = 10): Promise<Transac
 // Login with wallet
 export const loginWithWallet = async (walletAddress: string, signature: string): Promise<any> => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
-      walletAddress,
+    // Normalize the address to lowercase to avoid checksum issues
+    const normalizedAddress = walletAddress.toLowerCase();
+    
+    console.log('Attempting login with data:', { 
+      address: normalizedAddress, 
       signature
     });
+    
+    const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
+      address: normalizedAddress,  // Use normalized address
+      signature
+    });
+    
+    console.log('Login response:', response.data);
     
     // Store token for future requests
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
-      localStorage.setItem('walletAddress', walletAddress);
+      localStorage.setItem('walletAddress', walletAddress); // Store original format
     }
     
     return response.data;
-  } catch (error) {
-    console.error('Login error:', error);
+  } catch (error: any) {
+    console.error('Login error details:', error.response?.data || error.message);
     throw new Error('Failed to login');
   }
 };

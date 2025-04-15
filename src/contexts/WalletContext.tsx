@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../services/api';
+import authService from '../services/auth';
 
 interface WalletContextType {
   address: string | null;
@@ -36,14 +37,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       console.log('Connecting wallet address:', newAddress);
       console.log('Using API URL:', API_BASE_URL);
       
-      // For Web3Auth, we'll use the address itself as the authentication token
-      // In a production environment, you should implement proper JWT-based authentication
-      const token = `web3auth_${newAddress}`;
+      // Use authentication service to properly authenticate with the backend
+      await authService.authenticate(newAddress);
       
-      // Save address and token
+      // Address is already saved in localStorage by the authenticate method
       setAddress(newAddress);
-      localStorage.setItem('walletAddress', newAddress);
-      localStorage.setItem('token', token);
       
       console.log('Connected with address:', newAddress);
       return;

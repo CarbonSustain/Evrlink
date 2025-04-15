@@ -155,15 +155,26 @@ const BackgroundDetailsModal: React.FC<BackgroundDetailsModalProps> = ({
         const transferResult = await transferGiftCard({
           giftCardId: createResult.data.id,
           recipientAddress: recipientAddress,
+          senderAddress: userAddress
         });
 
-        if (!transferResult.success) {
+        // Handle both success and warning states
+        if (transferResult.success) {
+          console.log('Gift card transferred successfully or with warning');
+          
+          // Display warning if present
+          if (transferResult.warning) {
+            console.warn('Transfer warning:', transferResult.warning);
+            toast.success('Gift card transferred with a note: ' + transferResult.warning);
+          } else {
+            toast.success('Gift card created and transferred successfully!');
+          }
+          
+          onClose();
+        } else {
+          // This is a true error case
           throw new Error(transferResult.error || 'Failed to transfer gift card');
         }
-
-        console.log('Gift card transferred successfully');
-        onClose();
-        toast.success('Gift card created and transferred successfully!');
       } else {
         // Workflow 2: Create gift card with secret key
         console.log('Creating gift card with secret key...');
