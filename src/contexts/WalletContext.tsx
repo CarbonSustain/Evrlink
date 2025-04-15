@@ -36,37 +36,20 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       console.log('Connecting wallet address:', newAddress);
       console.log('Using API URL:', API_BASE_URL);
       
-      // In a real app, you'd sign a message and verify with backend
-      // For now, we'll simulate a login API call
-      const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
-        address: newAddress,
-        // In a real app, this would be a proper signature
-        signature: `mock_signature_for_${newAddress}`
-      });
-      
-      if (!response.data || !response.data.token) {
-        throw new Error('Invalid response from auth server');
-      }
-      
-      const { token } = response.data;
+      // For Web3Auth, we'll use the address itself as the authentication token
+      // In a production environment, you should implement proper JWT-based authentication
+      const token = `web3auth_${newAddress}`;
       
       // Save address and token
       setAddress(newAddress);
       localStorage.setItem('walletAddress', newAddress);
       localStorage.setItem('token', token);
       
-      console.log('Connected with token:', token);
+      console.log('Connected with address:', newAddress);
       return;
     } catch (error: any) {
       console.error('Wallet connection error:', error);
-      
-      // Check if there's a response message to provide better errors
-      const errorMessage = 
-        error.response?.data?.error || 
-        error.message || 
-        'Failed to connect wallet';
-      
-      throw new Error(errorMessage);
+      throw new Error(error.message || 'Failed to connect wallet');
     }
   };
 

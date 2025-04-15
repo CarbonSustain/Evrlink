@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { X, Wallet, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { connectWallet, isMetaMaskInstalled, isCoinbaseWalletInstalled } from '@/lib/wallet';
@@ -21,11 +21,19 @@ interface WalletConnectDialogProps {
 }
 
 const getWalletOptions = (): WalletOption[] => {
-  // Check installed wallets
+  // Check if wallets are installed
   const metamaskInstalled = isMetaMaskInstalled();
   const coinbaseInstalled = isCoinbaseWalletInstalled();
   
   return [
+    {
+      id: 'smartwallet',
+      name: 'Smart Wallet',
+      icon: <div className="text-blue-500 text-2xl">🔐</div>,
+      status: 'recommended',
+      downloadUrl: 'https://web3auth.io/',
+      description: 'Easy to use, no browser extension needed'
+    },
     {
       id: 'metamask',
       name: 'MetaMask',
@@ -35,33 +43,20 @@ const getWalletOptions = (): WalletOption[] => {
       description: 'The most popular Web3 wallet'
     },
     {
-      id: 'coinbase',
-      name: 'Coinbase Wallet',
-      icon: <div className="text-blue-500 text-2xl">📱</div>,
-      status: coinbaseInstalled ? 'installed' : 'not-installed',
-      downloadUrl: 'https://www.coinbase.com/wallet',
-      description: 'Secure crypto wallet for storing and trading crypto'
-    },
-    {
       id: 'brave',
       name: 'Brave Wallet',
       icon: <div className="text-orange-500 text-2xl">🦁</div>,
+      status: metamaskInstalled ? 'installed' : 'not-installed', // Brave uses MetaMask provider
       downloadUrl: 'https://brave.com/wallet/',
       description: 'Built into the Brave browser'
     },
     {
-      id: 'rainbow',
-      name: 'Rainbow',
-      icon: <div className="text-blue-500 text-2xl">🌈</div>,
-      downloadUrl: 'https://rainbow.me/',
-      description: 'Beautiful, simple, and secure'
-    },
-    {
-      id: 'walletconnect',
-      name: 'WalletConnect',
-      icon: <Wallet className="w-6 h-6 text-blue-500" />,
-      downloadUrl: 'https://walletconnect.com/',
-      description: 'Connect to any wallet'
+      id: 'coinbase',
+      name: 'Coinbase Wallet',
+      icon: <div className="text-blue-500 text-2xl">🔵</div>,
+      status: coinbaseInstalled ? 'installed' : 'not-installed',
+      downloadUrl: 'https://www.coinbase.com/wallet/downloads',
+      description: 'The secure crypto wallet by Coinbase'
     }
   ];
 };
@@ -119,7 +114,7 @@ const WalletConnectDialog: React.FC<WalletConnectDialogProps> = ({
             <div className="bg-gradient-to-r from-pink-500 to-orange-500 w-6 h-6 rounded-md flex items-center justify-center">
               <Wallet className="w-4 h-4 text-white" />
             </div>
-            <h2 className="text-xl font-bold">Connect Wallet</h2>
+            <DialogTitle className="text-xl font-bold">Connect Wallet</DialogTitle>
           </div>
           <button 
             onClick={() => onOpenChange(false)}
