@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { X, Wallet, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { connectWallet, isMetaMaskInstalled } from '@/lib/wallet';
+import { connectWallet, isMetaMaskInstalled, isCoinbaseWalletInstalled } from '@/lib/wallet';
 import { toast } from 'react-hot-toast';
 
 interface WalletOption {
@@ -21,8 +21,9 @@ interface WalletConnectDialogProps {
 }
 
 const getWalletOptions = (): WalletOption[] => {
-  // Check if MetaMask is installed
+  // Check installed wallets
   const metamaskInstalled = isMetaMaskInstalled();
+  const coinbaseInstalled = isCoinbaseWalletInstalled();
   
   return [
     {
@@ -37,7 +38,7 @@ const getWalletOptions = (): WalletOption[] => {
       id: 'coinbase',
       name: 'Coinbase Wallet',
       icon: <div className="text-blue-500 text-2xl">📱</div>,
-      status: 'recommended',
+      status: coinbaseInstalled ? 'installed' : 'not-installed',
       downloadUrl: 'https://www.coinbase.com/wallet',
       description: 'Secure crypto wallet for storing and trading crypto'
     },
@@ -84,17 +85,17 @@ const WalletConnectDialog: React.FC<WalletConnectDialogProps> = ({
 
   const handleWalletConnect = async (wallet: WalletOption) => {
     setConnectionError(null);
+    setConnecting(true);
     
     try {
-      setConnecting(true);
-      
-      // If wallet is not installed, redirect to download page
+      // If wallet is not installed, open in new tab and show instructions
       if (wallet.status === 'not-installed') {
         window.open(wallet.downloadUrl, '_blank');
-        setConnecting(false);
+        setConnectionError(`Please install ${wallet.name} and refresh the page after installation.`);
         return;
       }
       
+      // Connect to wallet
       const address = await connectWallet(wallet.id);
       
       if (address) {
@@ -105,7 +106,6 @@ const WalletConnectDialog: React.FC<WalletConnectDialogProps> = ({
     } catch (error: any) {
       console.error('Error connecting wallet:', error);
       setConnectionError(error.message || 'Failed to connect wallet');
-      toast.error(error.message || 'Failed to connect wallet');
     } finally {
       setConnecting(false);
     }
@@ -132,7 +132,14 @@ const WalletConnectDialog: React.FC<WalletConnectDialogProps> = ({
         {connectionError && (
           <div className="p-4 bg-red-500/10 border-b border-red-500/20 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-red-200">{connectionError}</div>
+            <div className="text-sm">
+              <div className="text-red-200 font-medium mb-1">{connectionError}</div>
+              {connectionError.includes('install') && (
+                <div className="text-red-300/70">
+                  After installation, please refresh this page and try connecting again.
+                </div>
+              )}
+            </div>
           </div>
         )}
         

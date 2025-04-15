@@ -174,13 +174,13 @@ export const createGiftCard = async (data: {
   message: string;
 }): Promise<any> => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/api/giftcard/create`, data, {
+    const response = await axios.post(`${API_BASE_URL}/api/gift-cards/create`, data, {
       headers: getAuthHeaders(),
     });
     return response.data;
-  } catch (error) {
-    console.error('Create gift card error:', error);
-    throw new Error('Failed to create gift card');
+  } catch (error: any) {
+    console.error('Create gift card error:', error.response?.data || error);
+    throw new Error(error.response?.data?.error || 'Failed to create gift card');
   }
 };
 

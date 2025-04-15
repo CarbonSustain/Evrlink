@@ -12,6 +12,7 @@ import { useBackgroundsStore } from '@/services/store';
 import CategoryNav from '@/components/CategoryNav';
 import BackgroundGallery from '@/components/BackgroundGallery';
 import { API_BASE_URL } from '@/services/api';
+import BackgroundDetailsModal from '@/components/BackgroundDetailsModal';
 
 interface Category {
   id: string;
@@ -210,6 +211,7 @@ const Marketplace: React.FC = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedBackground, setSelectedBackground] = useState<Background | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   
   // Use the backgrounds store
   const { 
@@ -261,8 +263,13 @@ const Marketplace: React.FC = () => {
   };
 
   const handleBackgroundSelect = (background: Background) => {
-    // Show background details modal
     setSelectedBackground(background);
+    setIsDetailsModalOpen(true);
+  };
+
+  const handleCloseDetailsModal = () => {
+    setIsDetailsModalOpen(false);
+    setSelectedBackground(null);
   };
 
   // Handle category selection
@@ -402,12 +409,13 @@ const Marketplace: React.FC = () => {
         </div>
       </main>
 
-      <BackgroundModal
-        background={selectedBackground}
-        isOpen={!!selectedBackground}
-        onClose={() => setSelectedBackground(null)}
-        onSelect={handleBackgroundSelect}
-      />
+      {selectedBackground && (
+        <BackgroundDetailsModal
+          open={isDetailsModalOpen}
+          onClose={handleCloseDetailsModal}
+          background={selectedBackground}
+        />
+      )}
     </div>
   );
 };
