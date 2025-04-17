@@ -18,41 +18,84 @@ declare global {
 
 // Get MetaMask provider
 const getMetaMaskProvider = () => {
-  // Check if we have multiple providers (like MetaMask + Web3Auth)
-  if (typeof window.ethereum !== 'undefined') {
-    // If we have multiple providers, find MetaMask
-    if (window.ethereum.providers) {
-      const provider = window.ethereum.providers.find(
-        (p: any) => p.isMetaMask && !p.isCoinbaseWallet
-      );
-      if (provider) return provider;
-    }
-    // If we only have one provider and it's MetaMask
-    if (window.ethereum.isMetaMask && !window.ethereum.isCoinbaseWallet) {
-      return window.ethereum;
-    }
+  if (typeof window === 'undefined') return null;
+  
+  // First check if we have a direct MetaMask provider
+  if (window.ethereum?.isMetaMask && !window.ethereum?.isCoinbaseWallet) {
+    return window.ethereum;
   }
+  
+  // Then check if we have MetaMask in the providers list
+  if (window.ethereum?.providers?.length > 0) {
+    const provider = window.ethereum.providers.find(
+      (p: any) => p.isMetaMask && !p.isCoinbaseWallet
+    );
+    if (provider) return provider;
+  }
+  
+  // Fallback: check for provider with name or id
+  if (window.ethereum?.providers?.length > 0) {
+    const provider = window.ethereum.providers.find(
+      (p: any) => p.name === 'MetaMask' || p.id === 'metamask'
+    );
+    if (provider) return provider;
+  }
+  
   return null;
-};
-
-// Check if MetaMask is installed
-export const isMetaMaskInstalled = (): boolean => {
-  return getMetaMaskProvider() !== null;
-};
-
-// Check if Coinbase Wallet is installed
-export const isCoinbaseWalletInstalled = (): boolean => {
-  return typeof window.coinbaseWalletExtension !== 'undefined' || (typeof window.ethereum !== 'undefined' && window.ethereum.isCoinbaseWallet === true);
 };
 
 // Get Coinbase Wallet provider
-const getCoinbaseProvider = () => {
+const getCoinbaseWalletProvider = () => {
+  if (typeof window === 'undefined') return null;
+  
+  // Check for Coinbase Wallet extension
   if (window.coinbaseWalletExtension) {
     return window.coinbaseWalletExtension;
-  } else if (window.ethereum && window.ethereum.isCoinbaseWallet) {
+  }
+
+  // Check if we have a direct Coinbase provider
+  if (window.ethereum?.isCoinbaseWallet) {
     return window.ethereum;
   }
+  
+  // Check if we have Coinbase in the providers list
+  if (window.ethereum?.providers?.length > 0) {
+    const provider = window.ethereum.providers.find(
+      (p: any) => p.isCoinbaseWallet
+    );
+    if (provider) return provider;
+  }
+  
+  // Fallback: check for provider with name or id
+  if (window.ethereum?.providers?.length > 0) {
+    const provider = window.ethereum.providers.find(
+      (p: any) => p.name === 'CoinbaseWallet' || p.id === 'coinbase'
+    );
+    if (provider) return provider;
+  }
+  
   return null;
+};
+
+export const isMetaMaskInstalled = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  if (window.ethereum?.isMetaMask) return true;
+  if (window.ethereum?.providers?.some((p: any) => p.isMetaMask)) return true;
+  if ((window as any).metamask) return true;
+  // Fallback: check for provider with name or id
+  if (window.ethereum?.providers?.some((p: any) => p.name === 'MetaMask' || p.id === 'metamask')) return true;
+  return false;
+};
+
+export const isCoinbaseWalletInstalled = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  if (window.coinbaseWalletExtension) return true;
+  if (window.ethereum?.isCoinbaseWallet) return true;
+  if (window.ethereum?.providers?.some((p: any) => p.isCoinbaseWallet)) return true;
+  if ((window as any).coinbaseWallet) return true;
+  // Fallback: check for provider with name or id
+  if (window.ethereum?.providers?.some((p: any) => p.name === 'CoinbaseWallet' || p.id === 'coinbase')) return true;
+  return false;
 };
 
 // Get MetaMask network
@@ -78,72 +121,96 @@ export const getMetaMaskChainId = async (): Promise<string> => {
 export const connectMetaMask = async (): Promise<string> => {
   if (!isMetaMaskInstalled()) {
     window.open('https://metamask.io/download/', '_blank');
-    throw new Error('Please install MetaMask to continue.');
+    throw new Error('MetaMask is not installed. Please install MetaMask to continue.');
   }
 
-  // Clean up Web3Auth if it exists to prevent interference
-  if (currentWeb3AuthInstance) {
-    try {
-      await currentWeb3AuthInstance.logout();
-      currentWeb3AuthInstance = null;
-    } catch (error) {
-      console.warn('Error cleaning up Web3Auth:', error);
-    }
-  }
-  
   try {
-    const provider = getMetaMaskProvider();
-    if (!provider) {
-      throw new Error('Failed to get MetaMask provider');
+    // Get the provider
+    let provider = window.ethereum;
+    if (window.ethereum.providers) {
+      provider = window.ethereum.providers.find(p => p.isMetaMask);
     }
 
-    const accounts = await provider.request({ method: 'eth_requestAccounts' });
-    
-    if (!accounts || accounts.length === 0) {
-      throw new Error('No accounts found. Please unlock your wallet.');
+    if (!provider) {
+      throw new Error('MetaMask provider not found');
     }
-    
+
+    // Request accounts
+    const accounts = await provider.request({ method: 'eth_requestAccounts' });
+    if (!accounts || accounts.length === 0) {
+      throw new Error('Please connect to MetaMask.');
+    }
+
     const address = accounts[0];
-    
-    console.log('MetaMask connected with address:', address);
-    
-    // Remove any existing listeners first
-    const handleAccountsChanged = function (accounts: string[]) {
-      if (accounts.length === 0) {
-        console.log('MetaMask disconnected, reloading page');
+    console.log('Connected to MetaMask:', address);
+
+    // Set up event listeners
+    provider.on('accountsChanged', (newAccounts: string[]) => {
+      if (newAccounts.length === 0) {
         localStorage.removeItem('walletAddress');
         localStorage.removeItem('token');
-        window.location.reload();
-      } else {
-        console.log('Account changed:', accounts[0]);
-        localStorage.setItem('walletAddress', accounts[0]);
       }
       window.location.reload();
-    };
+    });
 
-    const handleChainChanged = function (chainId: string) {
-      console.log('MetaMask chain changed, reloading page');
+    provider.on('chainChanged', () => {
       window.location.reload();
-    };
-
-    provider.removeListener?.('accountsChanged', handleAccountsChanged);
-    provider.removeListener?.('chainChanged', handleChainChanged);
-
-    // Add new listeners
-    provider.on('accountsChanged', handleAccountsChanged);
-    provider.on('chainChanged', handleChainChanged);
+    });
 
     return address;
   } catch (error: any) {
-    console.error('Error connecting to MetaMask', error);
-    
+    console.error('MetaMask connection error:', error);
     if (error.code === 4001) {
-      throw new Error('User rejected the connection request');
-    } else if (error.code === -32002) {
-      throw new Error('MetaMask is already processing a connection request');
+      throw new Error('Please connect to MetaMask.');
     }
-    
-    throw error;
+    throw new Error(error.message || 'Failed to connect to MetaMask');
+  }
+};
+
+// Connect to Coinbase Wallet
+export const connectCoinbaseWallet = async (): Promise<string> => {
+  if (!isCoinbaseWalletInstalled()) {
+    window.open('https://www.coinbase.com/wallet/downloads', '_blank');
+    throw new Error('Coinbase Wallet is not installed. Please install Coinbase Wallet to continue.');
+  }
+
+  try {
+    // Get the provider
+    const provider = getCoinbaseWalletProvider();
+
+    if (!provider) {
+      throw new Error('Coinbase Wallet provider not found');
+    }
+
+    // Request accounts
+    const accounts = await provider.request({ method: 'eth_requestAccounts' });
+    if (!accounts || accounts.length === 0) {
+      throw new Error('Please connect to Coinbase Wallet.');
+    }
+
+    const address = accounts[0];
+    console.log('Connected to Coinbase Wallet:', address);
+
+    // Set up event listeners
+    provider.on('accountsChanged', (newAccounts: string[]) => {
+      if (newAccounts.length === 0) {
+        localStorage.removeItem('walletAddress');
+        localStorage.removeItem('token');
+      }
+      window.location.reload();
+    });
+
+    provider.on('chainChanged', () => {
+      window.location.reload();
+    });
+
+    return address;
+  } catch (error: any) {
+    console.error('Coinbase Wallet connection error:', error);
+    if (error.code === 4001) {
+      throw new Error('Please connect to Coinbase Wallet.');
+    }
+    throw new Error(error.message || 'Failed to connect to Coinbase Wallet');
   }
 };
 
@@ -203,54 +270,14 @@ export const connectSmartWallet = async (): Promise<string> => {
 };
 
 // Disconnect Web3Auth Smart Wallet
-// Connect to Coinbase Wallet
-export const connectCoinbaseWallet = async (): Promise<string> => {
-  if (!isCoinbaseWalletInstalled()) {
-    window.open('https://www.coinbase.com/wallet/downloads', '_blank');
-    throw new Error('Coinbase Wallet is not installed. Please install Coinbase Wallet to continue.');
-  }
-
-  const provider = getCoinbaseProvider();
-  if (!provider) {
-    throw new Error('Failed to get Coinbase Wallet provider');
-  }
-  
-  try {
-    const accounts = await provider.request({ method: 'eth_requestAccounts' });
-    
-    if (!accounts || accounts.length === 0) {
-      throw new Error('No accounts found. Please unlock your Coinbase Wallet.');
+export const disconnectWeb3Auth = async () => {
+  if (currentWeb3AuthInstance) {
+    try {
+      await currentWeb3AuthInstance.logout();
+      currentWeb3AuthInstance = null;
+    } catch (error) {
+      console.error('Error disconnecting Web3Auth:', error);
     }
-    
-    const address = accounts[0];
-    
-    console.log('Coinbase Wallet connected with address:', address);
-    
-    provider.on('accountsChanged', function (accounts: string[]) {
-      if (accounts.length === 0) {
-        console.log('Coinbase Wallet disconnected, reloading page');
-        localStorage.removeItem('walletAddress');
-        localStorage.removeItem('token');
-      }
-      window.location.reload();
-    });
-    
-    provider.on('chainChanged', function (chainId: string) {
-      console.log('Coinbase Wallet chain changed, reloading page');
-      window.location.reload();
-    });
-
-    return address;
-  } catch (error: any) {
-    console.error('Error connecting to Coinbase Wallet', error);
-    
-    if (error.code === 4001) {
-      throw new Error('User rejected the connection request');
-    } else if (error.code === -32002) {
-      throw new Error('Coinbase Wallet is already processing a connection request');
-    }
-    
-    throw error;
   }
 };
 

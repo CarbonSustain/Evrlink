@@ -2,16 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { X, Wallet, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { connectWallet, isMetaMaskInstalled, isCoinbaseWalletInstalled } from '@/lib/wallet';
+import { connectMetaMask, connectCoinbaseWallet, isMetaMaskInstalled, isCoinbaseWalletInstalled } from '@/lib/wallet';
 import { toast } from 'react-hot-toast';
 
 interface WalletOption {
-  id: string;
+  id: 'metamask' | 'coinbase';
   name: string;
-  icon: React.ReactNode;
-  status?: 'recommended' | 'installed' | 'not-installed';
+  icon: string;
+  description: string;
+  status: 'installed' | 'not-installed';
   downloadUrl: string;
-  description?: string;
 }
 
 interface WalletConnectDialogProps {
@@ -20,87 +20,88 @@ interface WalletConnectDialogProps {
   onConnect?: (address: string) => void;
 }
 
-const getWalletOptions = (): WalletOption[] => {
-  // Check if wallets are installed
-  const metamaskInstalled = isMetaMaskInstalled();
-  const coinbaseInstalled = isCoinbaseWalletInstalled();
-  
-  return [
-    {
-      id: 'smartwallet',
-      name: 'Smart Wallet',
-      icon: <div className="text-blue-500 text-2xl">🔐</div>,
-      status: 'recommended',
-      downloadUrl: 'https://web3auth.io/',
-      description: 'Easy to use, no browser extension needed'
-    },
-    {
-      id: 'metamask',
-      name: 'MetaMask',
-      icon: <div className="text-orange-500 text-2xl">🦊</div>,
-      status: metamaskInstalled ? 'installed' : 'not-installed',
-      downloadUrl: 'https://metamask.io/download/',
-      description: 'The most popular Web3 wallet'
-    },
-    {
-      id: 'brave',
-      name: 'Brave Wallet',
-      icon: <div className="text-orange-500 text-2xl">🦁</div>,
-      status: metamaskInstalled ? 'installed' : 'not-installed', // Brave uses MetaMask provider
-      downloadUrl: 'https://brave.com/wallet/',
-      description: 'Built into the Brave browser'
-    },
-    {
-      id: 'coinbase',
-      name: 'Coinbase Wallet',
-      icon: <div className="text-blue-500 text-2xl">🔵</div>,
-      status: coinbaseInstalled ? 'installed' : 'not-installed',
-      downloadUrl: 'https://www.coinbase.com/wallet/downloads',
-      description: 'The secure crypto wallet by Coinbase'
-    }
-  ];
-};
+const getWalletOptions = (): WalletOption[] => [
+  {
+    id: 'metamask',
+    name: 'MetaMask',
+    icon: '/metamask.svg',
+    description: 'Popular browser wallet for DeFi & NFTs',
+    status: isMetaMaskInstalled() ? 'installed' : 'not-installed',
+    downloadUrl: 'https://metamask.io/download/'
+  },
+  {
+    id: 'coinbase',
+    name: 'Coinbase Wallet',
+    icon: '/coinbase.svg',
+    description: 'The gateway to the decentralized crypto economy',
+    status: isCoinbaseWalletInstalled() ? 'installed' : 'not-installed',
+    downloadUrl: 'https://www.coinbase.com/wallet/downloads'
+  }
+];
 
 const WalletConnectDialog: React.FC<WalletConnectDialogProps> = ({
   open,
   onOpenChange,
-  onConnect
+  onConnect,
 }) => {
   const [connecting, setConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [walletOptions, setWalletOptions] = useState<WalletOption[]>([]);
-  
-  // Update wallet options when dialog opens
-  useEffect(() => {
-    if (open) {
-      setWalletOptions(getWalletOptions());
-      setConnectionError(null);
-    }
-  }, [open]);
+
+ useEffect(() => {
+   if (open) {
+     // DEBUG: Log provider state
+     console.log('window.ethereum:', window.ethereum);
+     console.log('window.ethereum.providers:', window.ethereum?.providers);
+     console.log('window.coinbaseWalletExtension:', window.coinbaseWalletExtension);
+     setWalletOptions(getWalletOptions());
+     setConnectionError(null);
+   }
+ }, [open]);
 
   const handleWalletConnect = async (wallet: WalletOption) => {
     setConnectionError(null);
     setConnecting(true);
     
     try {
-      // If wallet is not installed, open in new tab and show instructions
+      // If wallet is not installed, redirect to download page
       if (wallet.status === 'not-installed') {
         window.open(wallet.downloadUrl, '_blank');
-        setConnectionError(`Please install ${wallet.name} and refresh the page after installation.`);
-        return;
+        throw new Error(`${wallet.name} is not installed. Please install it and try again.`);
       }
       
-      // Connect to wallet
-      const address = await connectWallet(wallet.id);
-      
-      if (address) {
-        toast.success(`Connected to ${wallet.name}!`);
-        onConnect?.(address);
-        onOpenChange(false);
+      let address: string;
+      if (wallet.id === 'metamask') {
+        address = await connectMetaMask();
+      } else if (wallet.id === 'coinbase') {
+        address = await connectCoinbaseWallet();
+      } else {
+        throw new Error('Unknown wallet type');
       }
+      
+      if (!address) {
+        throw new Error('No address returned from wallet');
+      }
+      
+      // Connection successful
+      toast.success(`Connected to ${wallet.name}!`);
+      onConnect?.(address);
+      onOpenChange(false);
+      
     } catch (error: any) {
-      console.error('Error connecting wallet:', error);
-      setConnectionError(error.message || 'Failed to connect wallet');
+      console.error('Wallet connection error:', error);
+      
+      // Handle specific error cases
+      let errorMessage = error.message || 'Failed to connect wallet';
+      
+      if (error.code === 4001) {
+        errorMessage = 'Connection rejected. Please approve the connection in your wallet.';
+      } else if (error.code === -32002) {
+        errorMessage = 'Connection pending. Please check your wallet for pending requests.';
+      }
+      
+      setConnectionError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setConnecting(false);
     }
@@ -127,45 +128,35 @@ const WalletConnectDialog: React.FC<WalletConnectDialogProps> = ({
         {connectionError && (
           <div className="p-4 bg-red-500/10 border-b border-red-500/20 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <div className="text-red-200 font-medium mb-1">{connectionError}</div>
-              {connectionError.includes('install') && (
-                <div className="text-red-300/70">
-                  After installation, please refresh this page and try connecting again.
-                </div>
-              )}
-            </div>
+            <div className="text-sm text-red-200">{connectionError}</div>
           </div>
         )}
         
         <div className="max-h-[60vh] overflow-y-auto">
-          <div className="divide-y divide-gray-800">
+          <div className="grid gap-4 p-4">
             {walletOptions.map((wallet) => (
               <button
                 key={wallet.id}
                 className={cn(
-                  "flex items-center gap-3 w-full p-4 hover:bg-gray-800/50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed",
-                  wallet.status === 'recommended' && "bg-blue-900/20"
+                  'flex items-center gap-3 w-full p-4 rounded-xl text-left',
+                  'bg-gray-800 hover:bg-gray-700/80',
+                  'transition-all duration-200',
+                  'focus:outline-none focus:ring-2 focus:ring-pink-500',
+                  connecting && 'opacity-50 cursor-not-allowed'
                 )}
                 onClick={() => handleWalletConnect(wallet)}
-                disabled={connecting && wallet.status !== 'not-installed'}
+                disabled={connecting}
               >
-                <div className="bg-white w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden">
-                  {wallet.icon}
+                <div className="bg-gray-700 w-12 h-12 rounded-lg flex items-center justify-center p-2">
+                  <img
+                    src={wallet.icon}
+                    alt={wallet.name}
+                    className="w-full h-full"
+                  />
                 </div>
                 <div className="flex-1">
-                  <div className="font-semibold flex items-center gap-2">
-                    {wallet.name}
-                    {wallet.status === 'recommended' && (
-                      <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded-full">Recommended</span>
-                    )}
-                    {wallet.status === 'installed' && (
-                      <span className="text-xs px-2 py-0.5 bg-green-500/20 text-green-300 rounded-full">Installed</span>
-                    )}
-                  </div>
-                  {wallet.description && (
-                    <div className="text-sm text-gray-400">{wallet.description}</div>
-                  )}
+                  <div className="font-semibold text-lg">{wallet.name}</div>
+                  <div className="text-sm text-gray-400">{wallet.description}</div>
                   {wallet.status === 'not-installed' && (
                     <div className="text-sm text-yellow-400 flex items-center gap-1 mt-1">
                       <span>Not installed</span> 
