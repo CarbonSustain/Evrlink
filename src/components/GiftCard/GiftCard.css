@@ -1,0 +1,217 @@
+.gift-card-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  padding: 20px;
+}
+
+.gift-card-container {
+  perspective: 1000px;
+  width: 350px;
+  height: 200px;
+}
+
+.gift-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.8s;
+  transform-style: preserve-3d;
+  cursor: pointer;
+}
+
+.gift-card-container.flipped .gift-card {
+  transform: rotateY(180deg);
+}
+
+.card-front,
+.card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #FFB800, #FF7A00);
+  border: 2px solid #FFB800;
+  box-shadow: 0 8px 32px rgba(255, 122, 0, 0.3);
+  overflow: hidden;
+  color: white;
+}
+
+.card-front {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.card-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(0, 0, 0, 0.1)
+  );
+  opacity: 1;
+}
+
+.card-back {
+  transform: rotateY(180deg);
+  background: linear-gradient(45deg, #FF7A00, #FFB800);
+  position: relative;
+}
+
+.card-back::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(45deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(0, 0, 0, 0.1)
+  );
+  opacity: 1;
+}
+
+.card-content {
+  padding: 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.2),
+    rgba(255, 255, 255, 0.1)
+  );
+}
+
+.card-content h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #FFFFFF;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.shine {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  animation: shine 3s infinite;
+  z-index: 2;
+}
+
+@keyframes shine {
+  0% {
+    left: -100%;
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  60% {
+    opacity: 0.2;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+
+.click-hint {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  position: absolute;
+  bottom: 15px;
+  width: 100%;
+  text-align: center;
+  animation: pulse 2s infinite;
+  color: #FFFFFF;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
+  }
+}
+
+.message {
+  font-size: 1.2rem;
+  line-height: 1.4;
+  margin-bottom: 20px;
+  color: #FFFFFF;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.value {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #FFFFFF;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: 1px;
+}
+
+.decorative-pattern {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.1) 10px,
+    rgba(0, 0, 0, 0.1) 10px,
+    rgba(0, 0, 0, 0.1) 20px
+  );
+}
+
+/* Hover effects */
+.gift-card-container:hover {
+  transform: translateY(-5px);
+  transition: transform 0.3s ease;
+}
+
+.gift-card-container:hover .card-front,
+.gift-card-container:hover .card-back {
+  border-color: #FFFFFF;
+  box-shadow: 0 12px 40px rgba(255, 184, 0, 0.4);
+}
+
+/* Mobile optimization */
+@media (max-width: 480px) {
+  .gift-card-container {
+    width: 300px;
+    height: 180px;
+  }
+  
+  .message {
+    font-size: 1rem;
+  }
+  
+  .value {
+    font-size: 1.8rem;
+  }
+} 
