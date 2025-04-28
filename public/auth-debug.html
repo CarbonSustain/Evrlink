@@ -1,98 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Evrlink Authentication Debug</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-      line-height: 1.6;
-    }
-    h1 {
-      color: #333;
-      border-bottom: 2px solid #eee;
-      padding-bottom: 10px;
-    }
-    button {
-      background-color: #4CAF50;
-      border: none;
-      color: white;
-      padding: 10px 15px;
-      text-align: center;
-      text-decoration: none;
-      display: inline-block;
-      font-size: 16px;
-      margin: 4px 2px;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    input {
-      padding: 8px;
-      margin: 5px 0;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      width: 300px;
-    }
-    .output {
-      background-color: #f5f5f5;
-      border: 1px solid #ddd;
-      padding: 15px;
-      margin-top: 20px;
-      border-radius: 4px;
-      white-space: pre-wrap;
-      overflow-x: auto;
-    }
-    .error {
-      color: red;
-    }
-    .success {
-      color: green;
-    }
-  </style>
-</head>
-<body>
-  <h1>Evrlink Authentication Debug Tool</h1>
-  
-  <div>
-    <h2>Current Authentication State</h2>
-    <div id="current-auth-state" class="output">Checking...</div>
-    <button onclick="checkAuthState()">Refresh State</button>
-    <button onclick="clearAuth()">Clear Authentication</button>
-  </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Evrlink Authentication Debug</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        line-height: 1.6;
+      }
+      h1 {
+        color: #333;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 10px;
+      }
+      button {
+        background-color: #4caf50;
+        border: none;
+        color: white;
+        padding: 10px 15px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+      input {
+        padding: 8px;
+        margin: 5px 0;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        width: 300px;
+      }
+      .output {
+        background-color: #f5f5f5;
+        border: 1px solid #ddd;
+        padding: 15px;
+        margin-top: 20px;
+        border-radius: 4px;
+        white-space: pre-wrap;
+        overflow-x: auto;
+      }
+      .error {
+        color: red;
+      }
+      .success {
+        color: green;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Evrlink Authentication Debug Tool</h1>
 
-  <div>
-    <h2>Test Authentication</h2>
     <div>
-      <label for="wallet-address">Wallet Address:</label>
-      <input type="text" id="wallet-address" value="0xb459fa28bb622f9aa45764008f98173a25da0158" />
+      <h2>Current Authentication State</h2>
+      <div id="current-auth-state" class="output">Checking...</div>
+      <button onclick="checkAuthState()">Refresh State</button>
+      <button onclick="clearAuth()">Clear Authentication</button>
     </div>
-    <button onclick="testAuthentication()">Test Login</button>
-    <div id="auth-result" class="output">Results will appear here...</div>
-  </div>
 
-  <div>
-    <h2>Test API Endpoints</h2>
-    <button onclick="testPublicEndpoint()">Test Public Endpoint</button>
-    <button onclick="testProtectedEndpoint()">Test Protected Endpoint</button>
-    <div id="api-result" class="output">Results will appear here...</div>
-  </div>
+    <div>
+      <h2>Test Authentication</h2>
+      <div>
+        <label for="wallet-address">Wallet Address:</label>
+        <input
+          type="text"
+          id="wallet-address"
+          value="0xb459fa28bb622f9aa45764008f98173a25da0158"
+        />
+      </div>
+      <button onclick="testAuthentication()">Test Login</button>
+      <div id="auth-result" class="output">Results will appear here...</div>
+    </div>
 
-  <script>
-    // API Base URL
-    const API_BASE_URL = 'https://api.evrlink.com/';
+    <div>
+      <h2>Test API Endpoints</h2>
+      <button onclick="testPublicEndpoint()">Test Public Endpoint</button>
+      <button onclick="testProtectedEndpoint()">Test Protected Endpoint</button>
+      <div id="api-result" class="output">Results will appear here...</div>
+    </div>
 
-    // Check current auth state
-    function checkAuthState() {
-      const stateOutput = document.getElementById('current-auth-state');
-      const token = localStorage.getItem('token');
-      const walletAddress = localStorage.getItem('walletAddress');
-      
-      if (token && walletAddress) {
-        stateOutput.innerHTML = `
+    <script>
+      // API Base URL
+      const API_BASE_URL = "http://localhost:3001/";
+
+      // Check current auth state
+      function checkAuthState() {
+        const stateOutput = document.getElementById("current-auth-state");
+        const token = localStorage.getItem("token");
+        const walletAddress = localStorage.getItem("walletAddress");
+
+        if (token && walletAddress) {
+          stateOutput.innerHTML = `
           <span class="success">✅ Authentication Found</span>
           <br>
           <strong>Wallet Address:</strong> ${walletAddress}
@@ -101,198 +105,207 @@
           <br>
           <button onclick="decodeToken('${token}')">Decode Token</button>
         `;
-      } else {
-        stateOutput.innerHTML = `
+        } else {
+          stateOutput.innerHTML = `
           <span class="error">❌ Not Authenticated</span>
           <br>
-          Token: ${token ? '✓' : '✗'}
+          Token: ${token ? "✓" : "✗"}
           <br>
-          Wallet Address: ${walletAddress ? '✓' : '✗'}
+          Wallet Address: ${walletAddress ? "✓" : "✗"}
         `;
-      }
-    }
-
-    // Decode JWT token
-    function decodeToken(token) {
-      try {
-        // JWT parsing (without verification)
-        const parts = token.split('.');
-        if (parts.length !== 3) {
-          throw new Error('Invalid token format');
         }
-        
-        const payload = JSON.parse(atob(parts[1]));
-        const stateOutput = document.getElementById('current-auth-state');
-        
-        // Calculate token expiration
-        const expiryDate = new Date(payload.exp * 1000);
-        const now = new Date();
-        const isExpired = expiryDate < now;
-        
-        stateOutput.innerHTML += `
+      }
+
+      // Decode JWT token
+      function decodeToken(token) {
+        try {
+          // JWT parsing (without verification)
+          const parts = token.split(".");
+          if (parts.length !== 3) {
+            throw new Error("Invalid token format");
+          }
+
+          const payload = JSON.parse(atob(parts[1]));
+          const stateOutput = document.getElementById("current-auth-state");
+
+          // Calculate token expiration
+          const expiryDate = new Date(payload.exp * 1000);
+          const now = new Date();
+          const isExpired = expiryDate < now;
+
+          stateOutput.innerHTML += `
           <br><br>
           <strong>Decoded Token:</strong>
           <br>
           <pre>${JSON.stringify(payload, null, 2)}</pre>
           <br>
           <strong>Expiration:</strong> ${expiryDate.toLocaleString()} 
-          ${isExpired ? '<span class="error">(EXPIRED)</span>' : '<span class="success">(VALID)</span>'}
+          ${
+            isExpired
+              ? '<span class="error">(EXPIRED)</span>'
+              : '<span class="success">(VALID)</span>'
+          }
         `;
-      } catch (error) {
-        console.error('Error decoding token:', error);
-        alert('Failed to decode token: ' + error.message);
+        } catch (error) {
+          console.error("Error decoding token:", error);
+          alert("Failed to decode token: " + error.message);
+        }
       }
-    }
 
-    // Clear authentication data
-    function clearAuth() {
-      localStorage.removeItem('token');
-      localStorage.removeItem('walletAddress');
-      checkAuthState();
-      document.getElementById('auth-result').innerHTML = '<span class="success">Authentication data cleared</span>';
-    }
-
-    // Test authentication
-    async function testAuthentication() {
-      const resultOutput = document.getElementById('auth-result');
-      resultOutput.innerHTML = 'Testing authentication...';
-      
-      const walletAddress = document.getElementById('wallet-address').value.trim();
-      
-      if (!walletAddress || !walletAddress.startsWith('0x')) {
-        resultOutput.innerHTML = '<span class="error">Please enter a valid wallet address (should start with 0x)</span>';
-        return;
+      // Clear authentication data
+      function clearAuth() {
+        localStorage.removeItem("token");
+        localStorage.removeItem("walletAddress");
+        checkAuthState();
+        document.getElementById("auth-result").innerHTML =
+          '<span class="success">Authentication data cleared</span>';
       }
-      
-      // Create mock signature for authentication
-      const signature = `mock_signature_for_${walletAddress}`;
-      
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            address: walletAddress.toLowerCase(),
-            signature
-          })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok && data.token) {
-          // Store token and wallet address
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('walletAddress', walletAddress);
-          
-          resultOutput.innerHTML = `
+
+      // Test authentication
+      async function testAuthentication() {
+        const resultOutput = document.getElementById("auth-result");
+        resultOutput.innerHTML = "Testing authentication...";
+
+        const walletAddress = document
+          .getElementById("wallet-address")
+          .value.trim();
+
+        if (!walletAddress || !walletAddress.startsWith("0x")) {
+          resultOutput.innerHTML =
+            '<span class="error">Please enter a valid wallet address (should start with 0x)</span>';
+          return;
+        }
+
+        // Create mock signature for authentication
+        const signature = `mock_signature_for_${walletAddress}`;
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              address: walletAddress.toLowerCase(),
+              signature,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.token) {
+            // Store token and wallet address
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("walletAddress", walletAddress);
+
+            resultOutput.innerHTML = `
             <span class="success">✅ Authentication successful!</span>
             <br>
             <strong>Token:</strong> ${data.token.substring(0, 20)}...
             <br>
             <strong>User:</strong> ${JSON.stringify(data.user)}
           `;
-          
-          // Update the auth state display
-          checkAuthState();
-        } else {
-          resultOutput.innerHTML = `
+
+            // Update the auth state display
+            checkAuthState();
+          } else {
+            resultOutput.innerHTML = `
             <span class="error">❌ Authentication failed</span>
             <br>
             <strong>Status:</strong> ${response.status} ${response.statusText}
             <br>
-            <strong>Error:</strong> ${data.error || 'Unknown error'}
+            <strong>Error:</strong> ${data.error || "Unknown error"}
           `;
-        }
-      } catch (error) {
-        console.error('Authentication error:', error);
-        resultOutput.innerHTML = `
+          }
+        } catch (error) {
+          console.error("Authentication error:", error);
+          resultOutput.innerHTML = `
           <span class="error">❌ Network error</span>
           <br>
           <strong>Error:</strong> ${error.message}
           <br>
           <strong>Note:</strong> Make sure your backend server is running at ${API_BASE_URL}
         `;
+        }
       }
-    }
 
-    // Test public endpoint
-    async function testPublicEndpoint() {
-      const resultOutput = document.getElementById('api-result');
-      resultOutput.innerHTML = 'Testing public endpoint...';
-      
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/backgrounds/test`);
-        const data = await response.json();
-        
-        resultOutput.innerHTML = `
+      // Test public endpoint
+      async function testPublicEndpoint() {
+        const resultOutput = document.getElementById("api-result");
+        resultOutput.innerHTML = "Testing public endpoint...";
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/backgrounds/test`);
+          const data = await response.json();
+
+          resultOutput.innerHTML = `
           <span class="success">✅ Public endpoint test successful</span>
           <br>
           <strong>Status:</strong> ${response.status} ${response.statusText}
           <br>
           <strong>Response:</strong> ${JSON.stringify(data, null, 2)}
         `;
-      } catch (error) {
-        console.error('Public endpoint error:', error);
-        resultOutput.innerHTML = `
+        } catch (error) {
+          console.error("Public endpoint error:", error);
+          resultOutput.innerHTML = `
           <span class="error">❌ Public endpoint test failed</span>
           <br>
           <strong>Error:</strong> ${error.message}
         `;
+        }
       }
-    }
 
-    // Test protected endpoint
-    async function testProtectedEndpoint() {
-      const resultOutput = document.getElementById('api-result');
-      resultOutput.innerHTML = 'Testing protected endpoint...';
-      
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        resultOutput.innerHTML = '<span class="error">❌ No authentication token found. Please login first.</span>';
-        return;
-      }
-      
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-          resultOutput.innerHTML = `
+      // Test protected endpoint
+      async function testProtectedEndpoint() {
+        const resultOutput = document.getElementById("api-result");
+        resultOutput.innerHTML = "Testing protected endpoint...";
+
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          resultOutput.innerHTML =
+            '<span class="error">❌ No authentication token found. Please login first.</span>';
+          return;
+        }
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            resultOutput.innerHTML = `
             <span class="success">✅ Protected endpoint test successful</span>
             <br>
             <strong>Status:</strong> ${response.status} ${response.statusText}
             <br>
             <strong>Response:</strong> ${JSON.stringify(data, null, 2)}
           `;
-        } else {
-          resultOutput.innerHTML = `
+          } else {
+            resultOutput.innerHTML = `
             <span class="error">❌ Protected endpoint test failed</span>
             <br>
             <strong>Status:</strong> ${response.status} ${response.statusText}
             <br>
-            <strong>Error:</strong> ${data.error || 'Unknown error'}
+            <strong>Error:</strong> ${data.error || "Unknown error"}
           `;
-        }
-      } catch (error) {
-        console.error('Protected endpoint error:', error);
-        resultOutput.innerHTML = `
+          }
+        } catch (error) {
+          console.error("Protected endpoint error:", error);
+          resultOutput.innerHTML = `
           <span class="error">❌ Protected endpoint test failed</span>
           <br>
           <strong>Error:</strong> ${error.message}
         `;
+        }
       }
-    }
 
-    // Run initial check
-    checkAuthState();
-  </script>
-</body>
-</html> 
+      // Run initial check
+      checkAuthState();
+    </script>
+  </body>
+</html>

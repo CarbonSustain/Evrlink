@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Heart } from 'lucide-react';
-import BackgroundModal from './BackgroundModal';
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { Heart } from "lucide-react";
+import BackgroundModal from "./BackgroundModal";
 
 export interface Background {
   id: string;
@@ -18,11 +18,12 @@ interface BackgroundsGridProps {
   isLoading?: boolean;
 }
 
-const BackgroundsGrid: React.FC<BackgroundsGridProps> = ({ 
+const BackgroundsGrid: React.FC<BackgroundsGridProps> = ({
   backgrounds,
-  isLoading = false
+  isLoading = false,
 }) => {
-  const [selectedBackground, setSelectedBackground] = useState<Background | null>(null);
+  const [selectedBackground, setSelectedBackground] =
+    useState<Background | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
   const handleSelectBackground = (background: Background) => {
@@ -43,7 +44,7 @@ const BackgroundsGrid: React.FC<BackgroundsGridProps> = ({
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {Array.from({ length: 8 }).map((_, index) => (
-          <div 
+          <div
             key={index}
             className="aspect-square rounded-lg bg-white/5 animate-pulse"
           />
@@ -62,7 +63,7 @@ const BackgroundsGrid: React.FC<BackgroundsGridProps> = ({
 
   return (
     <>
-      <motion.div 
+      <motion.div
         className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -84,16 +85,18 @@ const BackgroundsGrid: React.FC<BackgroundsGridProps> = ({
               alt={background.name}
               className="w-full h-full object-cover"
               onError={(e) => {
-                // Fallback to placeholder if image fails to load
-                e.currentTarget.src = 'https://via.placeholder.com/400x400?text=Image+Not+Found';
+                e.currentTarget.src =
+                  "https://via.placeholder.com/400x400?text=Image+Not+Found";
               }}
             />
-            
+
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-4 flex flex-col justify-end">
               <h3 className="font-medium text-white">{background.name}</h3>
               <div className="flex justify-between items-center mt-1">
-                <p className="text-sm text-white/70">{formatPrice(background.price)}</p>
-                <button 
+                <p className="text-sm text-white/70">
+                  {formatPrice(background.price)}
+                </p>
+                <button
                   className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -123,4 +126,4 @@ const BackgroundsGrid: React.FC<BackgroundsGridProps> = ({
   );
 };
 
-export default BackgroundsGrid; 
+export default BackgroundsGrid;

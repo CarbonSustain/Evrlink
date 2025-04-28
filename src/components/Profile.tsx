@@ -164,22 +164,84 @@ export const Profile: React.FC<ProfileProps> = ({ address }) => {
           gap: 3
         }}>
           {inventory.giftCards.map((card) => (
-            <Card key={card.id}>
+            <Card key={card.id} sx={{ display: 'flex', flexDirection: 'column' }}>
               <CardMedia
                 component="img"
                 height="200"
                 image={card.image}
                 alt={card.name}
+                sx={{ objectFit: 'cover' }}
               />
-              <CardContent>
-                <Typography variant="h6">{card.name}</Typography>
-                <Typography color="textSecondary">{card.description}</Typography>
-                <Typography variant="body2" color="primary">
-                  Value: {card.value} ETH
-                </Typography>
-                <Typography variant="body2" color={card.status === 'redeemed' ? 'error' : 'success'}>
-                  Status: {card.status}
-                </Typography>
+              <CardContent sx={{ flexGrow: 1 }}>
+                <Typography variant="h6" gutterBottom>{card.name}</Typography>
+                
+                {/* Card Details */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography color="textSecondary" gutterBottom>{card.description}</Typography>
+                  <Typography variant="body2" color="primary" gutterBottom>
+                    Value: {card.value} ETH
+                  </Typography>
+                  <Typography variant="body2" 
+                    color={card.status === 'redeemed' ? 'error' : 'success'}
+                    gutterBottom
+                  >
+                    Status: {card.status}
+                  </Typography>
+                </Box>
+
+                {/* Blockchain Info */}
+                <Box sx={{ 
+                  bgcolor: 'background.paper', 
+                  p: 1.5, 
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'divider'
+                }}>
+                  <Typography variant="subtitle2" gutterBottom color="primary">
+                    Blockchain Details
+                  </Typography>
+                  
+                  {card.blockchainId && (
+                    <Typography variant="body2" sx={{ wordBreak: 'break-all' }} gutterBottom>
+                      ID: {card.blockchainId}
+                    </Typography>
+                  )}
+
+                  {card.secretKey && card.status !== 'redeemed' && (
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        wordBreak: 'break-all',
+                        bgcolor: 'warning.light',
+                        color: 'warning.contrastText',
+                        p: 1,
+                        borderRadius: 0.5,
+                        mt: 1
+                      }}
+                    >
+                      Secret Key: {card.secretKey}
+                    </Typography>
+                  )}
+
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="caption" display="block" color="text.secondary">
+                      From: {card.senderAddress?.slice(0, 6)}...{card.senderAddress?.slice(-4)}
+                    </Typography>
+                    {card.recipientAddress && (
+                      <Typography variant="caption" display="block" color="text.secondary">
+                        To: {card.recipientAddress?.slice(0, 6)}...{card.recipientAddress?.slice(-4)}
+                      </Typography>
+                    )}
+                    <Typography variant="caption" display="block" color="text.secondary">
+                      Created: {new Date(card.createdAt).toLocaleDateString()}
+                    </Typography>
+                    {card.expiresAt && (
+                      <Typography variant="caption" display="block" color="text.secondary">
+                        Expires: {new Date(card.expiresAt).toLocaleDateString()}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
               </CardContent>
             </Card>
           ))}
