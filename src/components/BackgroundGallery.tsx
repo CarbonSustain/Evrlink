@@ -17,14 +17,29 @@ interface BackgroundGalleryProps {
 // Helper function to get proper image URL
 const getImageUrl = (imageURI: string): string => {
   if (!imageURI) return '';
-  
+
+  // If it's a full URL (either S3 or API), try S3 first
   if (imageURI.startsWith('http')) {
+    // Extract just the filename (timestamp.ext) from the URL
+    const match = imageURI.match(/([0-9]+\.[a-zA-Z]+)$/);
+    if (match) {
+      const filename = match[1];
+      // Return the S3 URL
+      return `${import.meta.env.VITE_REACT_APP_S3_BUCKET_URL}/${filename}`;
+    }
+    // If we can't extract the filename, return the original URL
     return imageURI;
-  } else if (imageURI.startsWith('/')) {
-    return `${API_BASE_URL}${imageURI}`;
-  } else {
-    return `${API_BASE_URL}/${imageURI}`;
   }
+
+  // For relative paths (e.g., just the filename)
+  const filename = imageURI.split('/').pop() || '';
+  if (!filename) return '';
+
+  // If no extension, default to jpeg
+  const finalFilename = filename.includes('.') ? filename : `${filename}.jpeg`;
+
+  // Return the S3 URL
+  return `${import.meta.env.VITE_REACT_APP_S3_BUCKET_URL}/${finalFilename}`;
 };
 
 const BackgroundGallery: React.FC<BackgroundGalleryProps> = ({
@@ -95,8 +110,21 @@ const BackgroundGallery: React.FC<BackgroundGalleryProps> = ({
                   className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.src = '/placeholder.jpg'; // Fallback image
-                    console.error(`Failed to load image: ${imageUrl}`);
+                    const currentSrc = target.src;
+
+                    // If this was an S3 URL that failed, try the API URL
+                    if (currentSrc.includes('s3.amazonaws.com')) {
+                      const filename = currentSrc.split('/').pop();
+                      if (filename) {
+                        target.src = `${API_BASE_URL}/uploads/${filename}`;
+                        return;
+                      }
+                    }
+
+                    // If API URL also fails or we couldn't get filename, use placeholder
+                    target.onerror = null; // Prevent infinite loop
+                    target.src = '/placeholder.jpg';
+                    console.error(`Failed to load image: ${currentSrc}`);
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />

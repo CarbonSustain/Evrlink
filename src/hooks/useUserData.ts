@@ -32,6 +32,12 @@ interface GiftCard {
   image: string;
   value: number;
   status: 'available' | 'redeemed';
+  secretKey?: string;
+  blockchainId?: string;
+  createdAt: string;
+  expiresAt?: string;
+  senderAddress: string;
+  recipientAddress?: string;
 }
 
 interface Background {
@@ -81,15 +87,21 @@ export const useUserData = (address: string | undefined) => {
       setUserData(prev => ({ ...prev, isLoading: true, error: null }));
 
       try {
+        interface ApiResponse<T> {
+          success: boolean;
+          data: T;
+          error?: string;
+        }
+
         const [profileRes, inventoryRes, activityRes] = await Promise.all([
-          getUserProfile(address),
-          getUserInventory(address),
-          getUserActivity(address)
+          getUserProfile(address) as Promise<ApiResponse<UserProfile>>,
+          getUserInventory(address) as Promise<ApiResponse<UserInventory>>,
+          getUserActivity(address) as Promise<ApiResponse<{activities: Activity[]}>>
         ]);
 
         // Check for any errors
         if (!profileRes.success || !inventoryRes.success || !activityRes.success) {
-          throw new Error(profileRes.error || inventoryRes.error || activityRes.error);
+          throw new Error(profileRes.error || inventoryRes.error || activityRes.error || 'API request failed');
         }
 
         setUserData({

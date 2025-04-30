@@ -6,7 +6,7 @@ import Layout from "./components/Layout";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-
+import UserProfile from "./components/UserProfile";
 import Index from "./pages/Index";
 import About from "./pages/About";
 import CreateGift from "./pages/CreateGift";
@@ -21,6 +21,7 @@ import CardDetail from "./pages/CardDetail";
 import CreateBackground from "./pages/CreateBackground";
 import Debug from "./pages/Debug";
 import ProfilePage from "./pages/ProfilePage";
+import { User } from "lucide-react";
 
 const queryClient = new QueryClient();
 
@@ -43,9 +44,18 @@ const App = () => (
                 <Route path="my-gift-cards" element={<MyGiftCards />} />
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="marketplace" element={<Marketplace />} />
-                <Route path="marketplace/:categoryId" element={<CategoryCards />} />
-                <Route path="marketplace/:categoryId/:cardId" element={<CardDetail />} />
-                <Route path="create-background" element={<CreateBackground />} />
+                <Route
+                  path="marketplace/:categoryId"
+                  element={<CategoryCards />}
+                />
+                <Route
+                  path="marketplace/:categoryId/:cardId"
+                  element={<CardDetail />}
+                />
+                <Route
+                  path="create-background"
+                  element={<CreateBackground />}
+                />
                 <Route path="debug" element={<Debug />} />
               </Route>
               <Route path="*" element={<NotFound />} />

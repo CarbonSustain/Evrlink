@@ -11,42 +11,35 @@ export interface ApiResponse<T = any> {
 
 // Use import.meta.env for Vite instead of process.env
 // Make sure we handle the undefined case safely
-const getApiBaseUrl = () => {
-  // Check if we're running in a browser environment
-  if (typeof import.meta !== 'undefined' && import.meta.env) {
-    return import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' 
-      ? 'https://evrlink.com' 
-      : 'https://api.evrlink.com');
-  }
-  // Fallback for non-browser environments
-  return import.meta.env.MODE === 'development' 
-    ? 'https://evrlink.com' 
-    : 'https://api.evrlink.com';
-};
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:3001";
 
-const API_BASE_URL = getApiBaseUrl();
 // Log the API URL to confirm the environment variable is loading correctly
-console.log('Using API URL:', API_BASE_URL);
+console.log("Using API URL:", API_BASE_URL);
 
-const API_PREFIX = '/api'; // Add API prefix
+const API_PREFIX = "/api"; // Add API prefix
 
 // Constants for retry mechanism
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const fetchWithRetry = async (url: string, options: RequestInit, retries = MAX_RETRIES): Promise<Response> => {
+const fetchWithRetry = async (
+  url: string,
+  options: RequestInit,
+  retries = MAX_RETRIES
+): Promise<Response> => {
   try {
     const response = await fetch(url, options);
-    
+
     // Don't retry for 404 responses as they are likely intentional
     if (!response.ok && response.status !== 404 && retries > 0) {
       console.log(`Request failed, retrying... (${retries} attempts left)`);
       await delay(RETRY_DELAY);
       return fetchWithRetry(url, options, retries - 1);
     }
-    
+
     return response;
   } catch (error) {
     if (retries > 0) {
@@ -59,45 +52,50 @@ const fetchWithRetry = async (url: string, options: RequestInit, retries = MAX_R
 };
 
 // Add console logging for API initialization
-console.log('Initializing API with base URL:', API_BASE_URL);
+console.log("Initializing API with base URL:", API_BASE_URL);
 
 export const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem("token");
   return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+    Accept: "application/json",
   };
 };
 
 // Helper function to handle API responses
 const handleApiResponse = async (response: Response) => {
-  const contentType = response.headers.get('content-type');
-  console.log('Response content type:', contentType);
-  
-  if (!contentType?.includes('application/json')) {
+  const contentType = response.headers.get("content-type");
+  console.log("Response content type:", contentType);
+
+  if (!contentType?.includes("application/json")) {
     const text = await response.text();
-    console.error('Non-JSON response received:', text);
-    console.error('Response headers:', Object.fromEntries(response.headers.entries()));
-    throw new Error('Server returned an invalid response format. Please check if the API server is running correctly.');
+    console.error("Non-JSON response received:", text);
+    console.error(
+      "Response headers:",
+      Object.fromEntries(response.headers.entries())
+    );
+    throw new Error(
+      "Server returned an invalid response format. Please check if the API server is running correctly."
+    );
   }
 
   try {
     const data = await response.json();
-    console.log('API response data:', data);
+    console.log("API response data:", data);
     return data;
   } catch (error) {
-    console.error('Failed to parse JSON response:', error);
-    throw new Error('Invalid JSON response from server');
+    console.error("Failed to parse JSON response:", error);
+    throw new Error("Invalid JSON response from server");
   }
 };
 
 // Update checkApiHealth function with better logging
 export const checkApiHealth = async (): Promise<boolean> => {
   // TEMPORARY: Force health check to pass regardless of actual API status
-  console.log('BYPASSING API health check - assuming API is available');
+  console.log("BYPASSING API health check - assuming API is available");
   return true;
-  
+
   /*
   try {
     // First try the most reliable endpoint based on server.js
@@ -180,32 +178,35 @@ export const checkApiHealth = async (): Promise<boolean> => {
 };
 
 // Update authenticatedFetch with better error handling
-export const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
-  const token = localStorage.getItem('token');
-  console.log('Making authenticated request to:', url);
-  
+export const authenticatedFetch = async (
+  url: string,
+  options: RequestInit = {}
+) => {
+  const token = localStorage.getItem("token");
+  console.log("Making authenticated request to:", url);
+
   try {
     const response = await fetch(url, {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': token ? `Bearer ${token}` : '',
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
         ...options.headers,
       },
     });
 
-    console.log('Response status:', response.status);
-    
+    console.log("Response status:", response.status);
+
     if (!response.ok) {
-      console.error('Request failed:', response.status, response.statusText);
+      console.error("Request failed:", response.status, response.statusText);
       const text = await response.text();
-      console.error('Error response body:', text);
+      console.error("Error response body:", text);
       throw new Error(`Request failed with status ${response.status}: ${text}`);
     }
 
     return handleApiResponse(response);
   } catch (error) {
-    console.error('Request error:', error);
+    console.error("Request error:", error);
     throw error;
   }
 };
@@ -215,19 +216,20 @@ export const authenticatedFetch = async (url: string, options: RequestInit = {})
  */
 export const createUserIfNotExists = async (address: string) => {
   const url = `${API_BASE_URL}/users/create`;
-  console.log('Creating user if not exists:', address);
-  
+  console.log("Creating user if not exists:", address);
+
   try {
     const response = await fetchWithRetry(url, {
-      method: 'POST',
+      method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify({
         walletAddress: address,
-        username: `${address.slice(0, 6)}...${address.slice(-4)}`
-      })
+        username: `${address.slice(0, 6)}...${address.slice(-4)}`,
+      }),
     });
-    
-    if (!response.ok && response.status !== 409) { // 409 means user already exists
+
+    if (!response.ok && response.status !== 409) {
+      // 409 means user already exists
       const errorText = await response.text();
       let errorData;
       try {
@@ -235,24 +237,24 @@ export const createUserIfNotExists = async (address: string) => {
       } catch (e) {
         errorData = { error: errorText };
       }
-      
-      console.error('User creation error:', {
+
+      console.error("User creation error:", {
         status: response.status,
-        error: errorData
+        error: errorData,
       });
       return {
         success: false,
-        error: errorData?.error || `Failed to create user (${response.status})`
+        error: errorData?.error || `Failed to create user (${response.status})`,
       };
     }
-    
-    console.log('User creation successful or user already exists');
+
+    console.log("User creation successful or user already exists");
     return { success: true };
   } catch (error) {
-    console.error('Error creating user:', error);
+    console.error("Error creating user:", error);
     return {
       success: false,
-      error: 'Failed to create user. Please try again later.'
+      error: "Failed to create user. Please try again later.",
     };
   }
 };
@@ -277,24 +279,26 @@ export interface UserProfileData {
 /**
  * Get user profile data including activity stats
  */
-export const getUserProfile = async (address: string): Promise<ApiResponse<UserProfileData>> => {
+export const getUserProfile = async (
+  address: string
+): Promise<ApiResponse<UserProfileData>> => {
   // First try to create the user if they don't exist
   await createUserIfNotExists(address);
-  
+
   const url = `${API_BASE_URL}/users/${address}`;
-  console.log('Fetching user profile from:', url);
-  
+  console.log("Fetching user profile from:", url);
+
   try {
     // Use fetchWithRetry to improve reliability
     const response = await fetchWithRetry(url, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Profile fetch error:', {
+      console.error("Profile fetch error:", {
         status: response.status,
-        error: errorText
+        error: errorText,
       });
 
       // Create default profile for any error
@@ -304,39 +308,40 @@ export const getUserProfile = async (address: string): Promise<ApiResponse<UserP
           id: null,
           walletAddress: address,
           username: `${address.slice(0, 6)}...${address.slice(-4)}`,
-          bio: '',
-          profileImageUrl: '',
+          bio: "",
+          profileImageUrl: "",
           stats: {
             totalGiftCardsCreated: 0,
             totalGiftCardsSent: 0,
             totalGiftCardsReceived: 0,
-            totalBackgroundsMinted: 0
-          }
-        }
+            totalBackgroundsMinted: 0,
+          },
+        },
       };
     }
-    
+
     const data = await response.json();
-    console.log('User profile data received:', data);
-    
+    console.log("User profile data received:", data);
+
     return {
       success: true,
       data: {
         id: data.id || null,
         walletAddress: data.walletAddress || address,
-        username: data.username || `${address.slice(0, 6)}...${address.slice(-4)}`,
-        bio: data.bio || '',
-        profileImageUrl: data.profileImageUrl || '',
+        username:
+          data.username || `${address.slice(0, 6)}...${address.slice(-4)}`,
+        bio: data.bio || "",
+        profileImageUrl: data.profileImageUrl || "",
         stats: {
           totalGiftCardsCreated: data.totalGiftCardsCreated || 0,
           totalGiftCardsSent: data.totalGiftCardsSent || 0,
           totalGiftCardsReceived: data.totalGiftCardsReceived || 0,
-          totalBackgroundsMinted: data.totalBackgroundsMinted || 0
-        }
-      }
+          totalBackgroundsMinted: data.totalBackgroundsMinted || 0,
+        },
+      },
     };
   } catch (error) {
-    console.error('Error fetching user profile:', error);
+    console.error("Error fetching user profile:", error);
     // Return default profile for any error
     return {
       success: true,
@@ -344,15 +349,15 @@ export const getUserProfile = async (address: string): Promise<ApiResponse<UserP
         id: null,
         walletAddress: address,
         username: `${address.slice(0, 6)}...${address.slice(-4)}`,
-        bio: '',
-        profileImageUrl: '',
+        bio: "",
+        profileImageUrl: "",
         stats: {
           totalGiftCardsCreated: 0,
           totalGiftCardsSent: 0,
           totalGiftCardsReceived: 0,
-          totalBackgroundsMinted: 0
-        }
-      }
+          totalBackgroundsMinted: 0,
+        },
+      },
     };
   }
 };
@@ -367,37 +372,38 @@ export const updateUserProfile = async (data: {
   profileImageUrl?: string;
 }) => {
   const url = `${API_BASE_URL}/api/users/profile`;
-  console.log('Updating user profile:', data);
-  
+  console.log("Updating user profile:", data);
+
   try {
     const response = await fetch(url, {
-      method: 'PUT',
+      method: "PUT",
       headers: getAuthHeaders(),
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
-      console.error('Profile update error:', {
+      console.error("Profile update error:", {
         status: response.status,
-        error: errorData
+        error: errorData,
       });
       return {
         success: false,
-        error: errorData?.error || `Failed to update profile (${response.status})`
+        error:
+          errorData?.error || `Failed to update profile (${response.status})`,
       };
     }
-    
+
     const responseData = await response.json();
     return {
       success: true,
-      data: responseData
+      data: responseData,
     };
   } catch (error) {
-    console.error('Error updating user profile:', error);
+    console.error("Error updating user profile:", error);
     return {
       success: false,
-      error: 'Failed to update profile. Please try again later.'
+      error: "Failed to update profile. Please try again later.",
     };
   }
 };
@@ -407,47 +413,47 @@ export const updateUserProfile = async (data: {
  */
 export const getUserInventory = async (address: string) => {
   const url = `${API_BASE_URL}/api/users/${address}/inventory`;
-  console.log('Fetching user inventory from:', url);
-  
+  console.log("Fetching user inventory from:", url);
+
   try {
     const response = await fetch(url, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
-    
+
     // Always return empty inventory for errors
     if (!response.ok) {
-      console.error('Inventory fetch error:', {
+      console.error("Inventory fetch error:", {
         status: response.status,
-        error: await response.json().catch(() => null)
+        error: await response.json().catch(() => null),
       });
       return {
         success: true,
         data: {
           nfts: [],
           giftCards: [],
-          backgrounds: []
-        }
+          backgrounds: [],
+        },
       };
     }
-    
+
     const data = await response.json();
     return {
       success: true,
       data: {
         nfts: data.nfts || [],
         giftCards: data.giftCards || [],
-        backgrounds: data.backgrounds || []
-      }
+        backgrounds: data.backgrounds || [],
+      },
     };
   } catch (error) {
-    console.error('Error fetching user inventory:', error);
+    console.error("Error fetching user inventory:", error);
     return {
       success: true,
       data: {
         nfts: [],
         giftCards: [],
-        backgrounds: []
-      }
+        backgrounds: [],
+      },
     };
   }
 };
@@ -457,41 +463,41 @@ export const getUserInventory = async (address: string) => {
  */
 export const getUserActivity = async (address: string) => {
   const url = `${API_BASE_URL}/api/users/${address}/activity`;
-  console.log('Fetching user activity from:', url);
-  
+  console.log("Fetching user activity from:", url);
+
   try {
     const response = await fetch(url, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
-    
+
     // Always return empty activity for errors
     if (!response.ok) {
-      console.error('Activity fetch error:', {
+      console.error("Activity fetch error:", {
         status: response.status,
-        error: await response.json().catch(() => null)
+        error: await response.json().catch(() => null),
       });
       return {
         success: true,
         data: {
-          activities: []
-        }
+          activities: [],
+        },
       };
     }
-    
+
     const data = await response.json();
     return {
       success: true,
       data: {
-        activities: data.activities || []
-      }
+        activities: data.activities || [],
+      },
     };
   } catch (error) {
-    console.error('Error fetching user activity:', error);
+    console.error("Error fetching user activity:", error);
     return {
       success: true,
       data: {
-        activities: []
-      }
+        activities: [],
+      },
     };
   }
 };
@@ -505,26 +511,28 @@ export interface CreateGiftCardParams {
   message?: string;
 }
 
-export const createGiftCard = async (params: CreateGiftCardParams): Promise<ApiResponse<{ id: string }>> => {
+export const createGiftCard = async (
+  params: CreateGiftCardParams
+): Promise<ApiResponse<{ id: string }>> => {
   try {
     const url = `${API_BASE_URL}/api/gift-cards/create`;
-    console.log('Creating gift card at:', url);
-    
+    console.log("Creating gift card at:", url);
+
     const response = await fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
       },
-      body: JSON.stringify(params)
+      body: JSON.stringify(params),
     });
-    
+
     return await handleApiResponse(response);
   } catch (error) {
-    console.error('Create gift card error:', error);
+    console.error("Create gift card error:", error);
     return {
       success: false,
-      error: 'Failed to create gift card'
+      error: "Failed to create gift card",
     };
   }
 };
@@ -541,70 +549,83 @@ export interface TransferGiftCardParams {
 /**
  * Transfer a gift card to another address
  */
-export const transferGiftCard = async (params: TransferGiftCardParams): Promise<ApiResponse<any>> => {
+export const transferGiftCard = async (
+  params: TransferGiftCardParams
+): Promise<ApiResponse<any>> => {
   try {
     const response = await fetch(`${API_BASE_URL}/api/gift-cards/transfer`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
       },
-      body: JSON.stringify(params)
+      body: JSON.stringify(params),
     });
-    
+
     return await handleApiResponse(response);
   } catch (error) {
-    console.error('Transfer gift card error:', error);
+    console.error("Transfer gift card error:", error);
     return {
       success: false,
-      error: 'Failed to transfer gift card'
+      error: "Failed to transfer gift card",
     };
   }
 };
 
 export interface GiftCardSecretResponse {
   success: boolean;
-  data?: any; 
+  data?: any;
   error?: string;
 }
 
 /**
  * Set secret key for a gift card
  */
-export const setGiftCardSecret = async ({ giftCardId, secret }: { giftCardId: string; secret: string }): Promise<GiftCardSecretResponse> => {
+export const setGiftCardSecret = async ({
+  giftCardId,
+  secret,
+}: {
+  giftCardId: string;
+  secret: string;
+}): Promise<GiftCardSecretResponse> => {
   try {
     // Use the correct endpoint with the proper path structure
     const url = `${API_BASE_URL}/api/gift-cards/set-secret`;
-    console.log('Setting gift card secret at:', url, 'for gift card:', giftCardId);
-    
+    console.log(
+      "Setting gift card secret at:",
+      url,
+      "for gift card:",
+      giftCardId
+    );
+
     // Use fetch with authentication headers
     const response = await fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
       },
       body: JSON.stringify({
         giftCardId,
-        secret
-      })
+        secret,
+      }),
     });
-    
-    console.log('Set gift card secret response status:', response.status);
-    
+
+    console.log("Set gift card secret response status:", response.status);
+
     if (response.ok) {
       const data = await response.json().catch(() => ({}));
-      return { 
-        success: true, 
-        data 
+      return {
+        success: true,
+        data,
       };
     }
-    
+
     // Handle errors
     let errorMessage = `Server returned ${response.status}: ${response.statusText}`;
     try {
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
         const errorData = await response.json();
         errorMessage = errorData.error || errorMessage;
       } else {
@@ -612,15 +633,18 @@ export const setGiftCardSecret = async ({ giftCardId, secret }: { giftCardId: st
         if (text) errorMessage += ` - ${text}`;
       }
     } catch (parseError) {
-      console.error('Error parsing error response:', parseError);
+      console.error("Error parsing error response:", parseError);
     }
-    
+
     throw new Error(errorMessage);
   } catch (error) {
-    console.error('Error setting gift card secret:', error);
-    return { 
+    console.error("Error setting gift card secret:", error);
+    return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to set gift card secret'
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to set gift card secret",
     };
   }
 };
@@ -631,26 +655,26 @@ export const setGiftCardSecret = async ({ giftCardId, secret }: { giftCardId: st
 export const claimGiftCard = async (giftCardId: string, secret: string) => {
   try {
     const url = `${API_BASE_URL}/api/gift-cards/claim`;
-    console.log('Claiming gift card at:', url, 'for gift card:', giftCardId);
-    
+    console.log("Claiming gift card at:", url, "for gift card:", giftCardId);
+
     const response = await fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
       },
       body: JSON.stringify({
         giftCardId,
-        secret
-      })
+        secret,
+      }),
     });
-    
+
     return await handleApiResponse(response);
   } catch (error) {
-    console.error('Claim gift card error:', error);
+    console.error("Claim gift card error:", error);
     return {
       success: false,
-      error: 'Failed to claim gift card'
+      error: "Failed to claim gift card",
     };
   }
 };
@@ -658,18 +682,21 @@ export const claimGiftCard = async (giftCardId: string, secret: string) => {
 /**
  * Get user's owned gift cards
  */
-export const getUserGiftCards = async (address: string, options = {}): Promise<ApiResponse<any[]>> => {
+export const getUserGiftCards = async (
+  address: string,
+  options = {}
+): Promise<ApiResponse<any[]>> => {
   try {
     // Default parameters
     const defaultParams = {
-      page: 1, 
+      page: 1,
       limit: 10,
-      currentOwner: address // Use currentOwner instead of owner to match DB column
+      currentOwner: address, // Use currentOwner instead of owner to match DB column
     };
-    
+
     // Combine default with provided options
     const params = { ...defaultParams, ...options };
-    
+
     // Build query string
     const queryParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
@@ -677,272 +704,284 @@ export const getUserGiftCards = async (address: string, options = {}): Promise<A
         queryParams.append(key, value.toString());
       }
     });
-    
+
     // Use the exact endpoint matching your backend
     const url = `${API_BASE_URL}/api/giftcard/list?${queryParams.toString()}`;
-    console.log('Fetching user gift cards from:', url);
-    
+    console.log("Fetching user gift cards from:", url);
+
     try {
       const response = await fetchWithRetry(url, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
       });
-      
-      console.log('Gift card list response:', response.status);
-      
+
+      console.log("Gift card list response:", response.status);
+
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Failed to fetch gift cards:', errorText);
-        throw new Error(`Failed to fetch gift cards: ${response.status} ${response.statusText}`);
+        console.error("Failed to fetch gift cards:", errorText);
+        throw new Error(
+          `Failed to fetch gift cards: ${response.status} ${response.statusText}`
+        );
       }
-      
+
       // Parse the actual response
       const data = await response.json();
-      
+
       // Convert the data to the expected format
-      const formattedData = Array.isArray(data.giftCards) ? data.giftCards.map(card => ({
-        id: card.id,
-        backgroundId: card.backgroundId,
-        owner: card.currentOwner,
-        price: card.price.toString(),
-        status: card.status,
-        createdAt: card.createdAt,
-        updatedAt: card.updatedAt,
-        imageURI: card.background?.imageURI || 'https://placehold.co/400x300?text=Gift+Card',
-        hasSecretKey: !!card.secretKeyHash,
-        message: card.message || ''
-      })) : [];
-      
+      const formattedData = Array.isArray(data.giftCards)
+        ? data.giftCards.map((card) => ({
+            id: card.id,
+            backgroundId: card.backgroundId,
+            owner: card.currentOwner,
+            price: card.price.toString(),
+            status: card.status,
+            createdAt: card.createdAt,
+            updatedAt: card.updatedAt,
+            imageURI:
+              card.background?.imageURI ||
+              "https://placehold.co/400x300?text=Gift+Card",
+            hasSecretKey: !!card.secretKeyHash,
+            message: card.message || "",
+          }))
+        : [];
+
       return {
         success: true,
-        data: formattedData
+        data: formattedData,
       };
     } catch (error) {
-      console.error('Error fetching gift cards:', error);
-      
+      console.error("Error fetching gift cards:", error);
+
       // Fallback to mock data for development
-      console.log('Falling back to mock data for gift cards');
+      console.log("Falling back to mock data for gift cards");
       return {
         success: true,
         data: [
           {
-            id: 'gc-001',
-            backgroundId: 'bg-001',
+            id: "gc-001",
+            backgroundId: "bg-001",
             owner: address,
-            price: '0.05',
-            status: 'available',
+            price: "0.05",
+            status: "available",
             createdAt: new Date().toISOString(),
-            imageURI: 'https://placehold.co/400x300?text=Gift+Card',
+            imageURI: "https://placehold.co/400x300?text=Gift+Card",
             hasSecretKey: true,
-            message: 'Happy birthday!'
+            message: "Happy birthday!",
           },
           {
-            id: 'gc-002',
-            backgroundId: 'bg-002',
+            id: "gc-002",
+            backgroundId: "bg-002",
             owner: address,
-            price: '0.1',
-            status: 'available',
+            price: "0.1",
+            status: "available",
             createdAt: new Date(Date.now() - 86400000).toISOString(),
-            imageURI: 'https://placehold.co/400x300?text=Gift+Card+2',
+            imageURI: "https://placehold.co/400x300?text=Gift+Card+2",
             hasSecretKey: false,
-            message: 'Congratulations!'
-          }
-        ]
+            message: "Congratulations!",
+          },
+        ],
       };
     }
   } catch (error) {
-    console.error('Error in getUserGiftCards:', error);
-    return { success: false, error: 'Failed to fetch gift cards' };
+    console.error("Error in getUserGiftCards:", error);
+    return { success: false, error: "Failed to fetch gift cards" };
   }
 };
 
 /**
  * Get user's created backgrounds
  */
-export const getUserBackgrounds = async (address: string): Promise<ApiResponse<any[]>> => {
+export const getUserBackgrounds = async (
+  address: string
+): Promise<ApiResponse<any[]>> => {
   try {
     const url = `${API_BASE_URL}/backgrounds?creator=${address}`;
-    console.log('Fetching user backgrounds from:', url);
-    
+    console.log("Fetching user backgrounds from:", url);
+
     try {
       const response = await fetchWithRetry(url, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
       });
-      console.log('Backgrounds list response:', response.status);
-      
+      console.log("Backgrounds list response:", response.status);
+
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Failed to fetch backgrounds:', errorText);
-        
+        console.error("Failed to fetch backgrounds:", errorText);
+
         // For development, return mock data
         return {
           success: true,
           data: [
             {
-              id: 'bg-001',
+              id: "bg-001",
               artistAddress: address,
-              imageURI: 'https://placehold.co/400x300?text=Background',
-              category: 'nature',
-              price: '0.05',
+              imageURI: "https://placehold.co/400x300?text=Background",
+              category: "nature",
+              price: "0.05",
               usageCount: 3,
-              createdAt: new Date().toISOString()
+              createdAt: new Date().toISOString(),
             },
             {
-              id: 'bg-002',
+              id: "bg-002",
               artistAddress: address,
-              imageURI: 'https://placehold.co/400x300?text=Background+2',
-              category: 'abstract',
-              price: '0.1',
+              imageURI: "https://placehold.co/400x300?text=Background+2",
+              category: "abstract",
+              price: "0.1",
               usageCount: 1,
-              createdAt: new Date(Date.now() - 86400000).toISOString()
-            }
-          ]
+              createdAt: new Date(Date.now() - 86400000).toISOString(),
+            },
+          ],
         };
       }
-      
+
       const data = await response.json();
       return {
         success: true,
-        data: data.backgrounds || []
+        data: data.backgrounds || [],
       };
     } catch (error) {
-      console.error('Error fetching backgrounds:', error);
-      return { 
+      console.error("Error fetching backgrounds:", error);
+      return {
         success: true,
         data: [
           {
-            id: 'bg-001',
+            id: "bg-001",
             artistAddress: address,
-            imageURI: 'https://placehold.co/400x300?text=Background',
-            category: 'nature',
-            price: '0.05',
+            imageURI: "https://placehold.co/400x300?text=Background",
+            category: "nature",
+            price: "0.05",
             usageCount: 3,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
           },
           {
-            id: 'bg-002',
+            id: "bg-002",
             artistAddress: address,
-            imageURI: 'https://placehold.co/400x300?text=Background+2',
-            category: 'abstract',
-            price: '0.1',
+            imageURI: "https://placehold.co/400x300?text=Background+2",
+            category: "abstract",
+            price: "0.1",
             usageCount: 1,
-            createdAt: new Date(Date.now() - 86400000).toISOString()
-          }
-        ] 
+            createdAt: new Date(Date.now() - 86400000).toISOString(),
+          },
+        ],
       };
     }
   } catch (error) {
-    console.error('Error in getUserBackgrounds:', error);
-    return { success: false, error: 'Failed to fetch backgrounds' };
+    console.error("Error in getUserBackgrounds:", error);
+    return { success: false, error: "Failed to fetch backgrounds" };
   }
 };
 
 /**
  * Get user's transaction history
  */
-export const getUserTransactions = async (address: string): Promise<ApiResponse<any[]>> => {
+export const getUserTransactions = async (
+  address: string
+): Promise<ApiResponse<any[]>> => {
   try {
     const url = `${API_BASE_URL}/transactions?address=${address}`;
-    console.log('Fetching user transactions from:', url);
-    
+    console.log("Fetching user transactions from:", url);
+
     try {
       const response = await fetchWithRetry(url, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
       });
-      console.log('Transactions list response:', response.status);
-      
+      console.log("Transactions list response:", response.status);
+
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Failed to fetch transactions:', errorText);
-        
+        console.error("Failed to fetch transactions:", errorText);
+
         // For development, return mock data
         return {
           success: true,
           data: [
             {
-              id: 'tx-001',
-              type: 'send',
-              giftCardId: 'gc-001',
+              id: "tx-001",
+              type: "send",
+              giftCardId: "gc-001",
               from: address,
-              to: '0x1234567890123456789012345678901234567890',
-              amount: '0.05',
+              to: "0x1234567890123456789012345678901234567890",
+              amount: "0.05",
               timestamp: new Date().toISOString(),
-              backgroundImage: 'https://placehold.co/400x300?text=Sent'
+              backgroundImage: "https://placehold.co/400x300?text=Sent",
             },
             {
-              id: 'tx-002',
-              type: 'receive',
-              giftCardId: 'gc-003',
-              from: '0x0987654321098765432109876543210987654321',
+              id: "tx-002",
+              type: "receive",
+              giftCardId: "gc-003",
+              from: "0x0987654321098765432109876543210987654321",
               to: address,
-              amount: '0.1',
+              amount: "0.1",
               timestamp: new Date(Date.now() - 86400000).toISOString(),
-              backgroundImage: 'https://placehold.co/400x300?text=Received'
-            }
-          ]
+              backgroundImage: "https://placehold.co/400x300?text=Received",
+            },
+          ],
         };
       }
-      
+
       const data = await response.json();
       return {
         success: true,
-        data: data.transactions || []
+        data: data.transactions || [],
       };
     } catch (error) {
-      console.error('Error fetching transactions:', error);
-      return { 
+      console.error("Error fetching transactions:", error);
+      return {
         success: true,
         data: [
           {
-            id: 'tx-001',
-            type: 'send',
-            giftCardId: 'gc-001',
+            id: "tx-001",
+            type: "send",
+            giftCardId: "gc-001",
             from: address,
-            to: '0x1234567890123456789012345678901234567890',
-            amount: '0.05',
+            to: "0x1234567890123456789012345678901234567890",
+            amount: "0.05",
             timestamp: new Date().toISOString(),
-            backgroundImage: 'https://placehold.co/400x300?text=Sent'
+            backgroundImage: "https://placehold.co/400x300?text=Sent",
           },
           {
-            id: 'tx-002',
-            type: 'receive',
-            giftCardId: 'gc-003',
-            from: '0x0987654321098765432109876543210987654321',
+            id: "tx-002",
+            type: "receive",
+            giftCardId: "gc-003",
+            from: "0x0987654321098765432109876543210987654321",
             to: address,
-            amount: '0.1',
+            amount: "0.1",
             timestamp: new Date(Date.now() - 86400000).toISOString(),
-            backgroundImage: 'https://placehold.co/400x300?text=Received'
-          }
-        ]
+            backgroundImage: "https://placehold.co/400x300?text=Received",
+          },
+        ],
       };
     }
   } catch (error) {
-    console.error('Error in getUserTransactions:', error);
-    return { success: false, error: 'Failed to fetch transactions' };
+    console.error("Error in getUserTransactions:", error);
+    return { success: false, error: "Failed to fetch transactions" };
   }
 };
 
 /**
  * Get gift card details by ID
  */
-export const getGiftCardDetails = async (giftCardId: string): Promise<ApiResponse<any>> => {
+export const getGiftCardDetails = async (
+  giftCardId: string
+): Promise<ApiResponse<any>> => {
   try {
     const url = `${API_BASE_URL}/api/gift-cards/${giftCardId}`;
-    console.log('Getting gift card details at:', url);
-    
+    console.log("Getting gift card details at:", url);
+
     const response = await fetch(url, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      }
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
     });
-    
+
     return await handleApiResponse(response);
   } catch (error) {
-    console.error('Get gift card details error:', error);
+    console.error("Get gift card details error:", error);
     return {
       success: false,
-      error: 'Failed to get gift card details'
+      error: "Failed to get gift card details",
     };
   }
 };
@@ -973,35 +1012,39 @@ interface GiftCardListResponse {
   limit: number;
 }
 
-export const listGiftCards = async (params: GiftCardSearchParams): Promise<ApiResponse<GiftCardListResponse>> => {
+export const listGiftCards = async (
+  params: GiftCardSearchParams
+): Promise<ApiResponse<GiftCardListResponse>> => {
   try {
     const queryParams = new URLSearchParams();
-    
-    if (params.page) queryParams.append('page', params.page.toString());
-    if (params.limit) queryParams.append('limit', params.limit.toString());
-    if (params.status) queryParams.append('status', params.status);
-    if (params.minPrice) queryParams.append('minPrice', params.minPrice.toString());
-    if (params.maxPrice) queryParams.append('maxPrice', params.maxPrice.toString());
-    if (params.owner) queryParams.append('owner', params.owner);
-    if (params.creator) queryParams.append('creator', params.creator);
-    
+
+    if (params.page) queryParams.append("page", params.page.toString());
+    if (params.limit) queryParams.append("limit", params.limit.toString());
+    if (params.status) queryParams.append("status", params.status);
+    if (params.minPrice)
+      queryParams.append("minPrice", params.minPrice.toString());
+    if (params.maxPrice)
+      queryParams.append("maxPrice", params.maxPrice.toString());
+    if (params.owner) queryParams.append("owner", params.owner);
+    if (params.creator) queryParams.append("creator", params.creator);
+
     const url = `${API_BASE_URL}/api/gift-cards?${queryParams.toString()}`;
-    console.log('Listing gift cards from:', url);
-    
+    console.log("Listing gift cards from:", url);
+
     const response = await fetch(url, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      }
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
     });
-    
+
     return await handleApiResponse(response);
   } catch (error) {
-    console.error('List gift cards error:', error);
+    console.error("List gift cards error:", error);
     return {
       success: false,
-      error: 'Failed to list gift cards'
+      error: "Failed to list gift cards",
     };
   }
-}; 
+};

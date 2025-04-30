@@ -2,27 +2,27 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 8080,
+    port: 8001,
     proxy: {
-      '/api': {
-        target: 'https://api.evrlink.com',
+      "/api": {
+        target: "https://api.evrlink.com",
         changeOrigin: true,
-        secure: true,
-        ws: true
-      }
-    }
+        secure: false,
+        ws: true,
+      },
+    },
   },
   plugins: [
     react(),
-    mode === 'development' && componentTagger(),
+    mode === "development" && componentTagger(),
     nodePolyfills({
-      include: ['buffer', 'crypto', 'stream', 'util'],
+      include: ["buffer", "crypto", "stream", "util"],
       globals: {
         Buffer: true,
         global: true,
@@ -39,7 +39,7 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks: {
-          'web3auth': ['@web3auth/modal', '@web3auth/base'],
+          web3auth: ["@web3auth/modal", "@web3auth/base"],
         },
       },
     },
