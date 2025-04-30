@@ -6,7 +6,6 @@ import Navbar from '@/components/Navbar';
 import axios from 'axios';
 import { getAuthHeaders, mintBackgroundNFT, verifyBackgroundStatus, checkAuthState } from '@/services/api';
 import { toast } from 'react-hot-toast';
-import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { useWallet } from '@/contexts/WalletContext';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { authLog } from '@/utils/debug';
@@ -19,7 +18,6 @@ const CreateBackground = () => {
   const [category, setCategory] = useState('');
   const [price, setPrice] = useState('');
   const [loading, setLoading] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingBackgroundId, setPendingBackgroundId] = useState<number | null>(null);
   const { address, connect, disconnect, isConnected, getToken } = useWallet();
 
@@ -27,9 +25,8 @@ const CreateBackground = () => {
     // Check if user is connected
     if (!address) {
       toast.error('Please connect your wallet first');
-      setDialogOpen(false);
     }
-  }, [address, dialogOpen]);
+  }, [address]);
 
   // Poll for background status if we have a pending background
   useEffect(() => {
@@ -129,9 +126,6 @@ const CreateBackground = () => {
       
       toast.dismiss();
       toast.success('Wallet connected successfully!');
-      
-      // Now open the dialog if they were trying to create a background
-      setDialogOpen(true);
     } catch (error: any) {
       toast.dismiss();
       toast.error(error.message || 'Failed to connect wallet');
@@ -243,34 +237,10 @@ const CreateBackground = () => {
       setPreviewUrl('');
       setCategory('');
       setPrice('');
-      setDialogOpen(false);
     } catch (error: any) {
-      console.error('Error minting background NFT:', error);
-      
+      console.error('Error creating background:', error);
       toast.dismiss();
-      const errorMessage = error.response?.data?.error || error.message || 'Failed to mint background NFT';
-      
-      // Special handling for authentication errors
-      if (errorMessage.includes('Invalid token') || 
-          errorMessage.includes('Authentication failed') || 
-          errorMessage.includes('token')) {
-        toast.error(`Authentication error: ${errorMessage}. Please reconnect your wallet.`);
-        
-        // Clear stored token and address
-        localStorage.removeItem('token');
-        
-        // Try to reconnect
-        try {
-          if (address) {
-            await connect(address);
-            toast.success('Wallet reconnected. Please try minting again.');
-          }
-        } catch (reconnectError) {
-          console.error('Reconnect error:', reconnectError);
-        }
-      } else {
-        toast.error(errorMessage);
-      }
+      toast.error(error.message || 'Failed to create background');
     } finally {
       setLoading(false);
     }
@@ -296,24 +266,21 @@ const CreateBackground = () => {
           <div className="h-1 w-20 bg-gradient-to-r from-primary to-secondary rounded-full" />
         </motion.div>
 
-        <div className="flex justify-center">
-          <Button 
-            onClick={() => address ? setDialogOpen(true) : handleConnectWallet()} 
-            className="bg-gradient-to-r from-primary to-secondary text-white py-4 px-8 rounded-xl text-lg font-medium hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
+        {!address ? (
+          <div className="flex justify-center">
+            <Button 
+              onClick={handleConnectWallet} 
+              className="bg-gradient-to-r from-primary to-secondary text-white py-4 px-8 rounded-xl text-lg font-medium hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
+            >
+              Connect Wallet First
+            </Button>
+          </div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
           >
-            {address ? 'Create New Background' : 'Connect Wallet First'}
-          </Button>
-        </div>
-
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="max-h-[90vh] overflow-y-auto">
-            <VisuallyHidden>
-              <DialogTitle>Create New Background</DialogTitle>
-            </VisuallyHidden>
-            <DialogDescription>
-              Upload an image and set its category and price to create a new background.
-            </DialogDescription>
-
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Image Upload */}
               <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
@@ -363,7 +330,7 @@ const CreateBackground = () => {
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full bg-white/10 border border-white/20 rounded-lg p-3 text-white"
+                  className="w-full bg-white border border-white/20 rounded-lg p-3 text-black"
                 >
                   <option value="">Select a category</option>
                   {categories.map((cat) => (
@@ -389,24 +356,16 @@ const CreateBackground = () => {
 
               <div className="flex justify-end">
                 <Button 
-                  type="button" 
-                  onClick={() => setDialogOpen(false)} 
-                  variant="outline" 
-                  className="mr-4"
-                >
-                  Cancel
-                </Button>
-                <Button 
                   type="submit" 
                   disabled={loading || !image || !category || !price}
-                  className="bg-gradient-to-r from-primary to-secondary text-white hover:opacity-90"
+                  className="bg-gradient-to-r from-primary to-secondary text-white hover:opacity-90 py-4 px-8 rounded-xl text-lg"
                 >
                   {loading ? 'Creating...' : 'Create Background'}
                 </Button>
               </div>
             </form>
-          </DialogContent>
-        </Dialog>
+          </motion.div>
+        )}
       </div>
     </div>
   );
