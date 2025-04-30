@@ -1,16 +1,3 @@
-<<<<<<< HEAD
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Upload, X } from 'lucide-react';
-import Button from '@/components/Button';
-import Navbar from '@/components/Navbar';
-import axios from 'axios';
-import { getAuthHeaders, mintBackgroundNFT, verifyBackgroundStatus, checkAuthState } from '@/services/api';
-import { toast } from 'react-hot-toast';
-import { useWallet } from '@/contexts/WalletContext';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { authLog } from '@/utils/debug';
-=======
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Upload, X } from "lucide-react";
@@ -24,17 +11,9 @@ import {
   checkAuthState,
 } from "@/services/api";
 import { toast } from "react-hot-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { useWallet } from "@/contexts/WalletContext";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { authLog } from "@/utils/debug";
->>>>>>> 761c210654d1bfdc924bb9c0afb7277aabcbf812
 
 const API_BASE_URL = "http://localhost:3001/";
 
@@ -44,42 +23,30 @@ const CreateBackground = () => {
   const [category, setCategory] = useState("");
   const [price, setPrice] = useState("");
   const [loading, setLoading] = useState(false);
-<<<<<<< HEAD
   const [pendingBackgroundId, setPendingBackgroundId] = useState<number | null>(null);
-=======
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [pendingBackgroundId, setPendingBackgroundId] = useState<number | null>(
-    null
-  );
->>>>>>> 761c210654d1bfdc924bb9c0afb7277aabcbf812
   const { address, connect, disconnect, isConnected, getToken } = useWallet();
 
   useEffect(() => {
     // Check if user is connected
     if (!address) {
-<<<<<<< HEAD
-      toast.error('Please connect your wallet first');
-=======
       toast.error("Please connect your wallet first");
-      setDialogOpen(false);
->>>>>>> 761c210654d1bfdc924bb9c0afb7277aabcbf812
     }
   }, [address]);
 
   // Poll for background status if we have a pending background
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
-
+    
     if (pendingBackgroundId) {
       // Initial check
       checkBackgroundStatus(pendingBackgroundId);
-
+      
       // Set up polling every 10 seconds
       intervalId = setInterval(() => {
         checkBackgroundStatus(pendingBackgroundId);
       }, 10000);
     }
-
+    
     return () => {
       if (intervalId) {
         clearInterval(intervalId);
@@ -91,16 +58,16 @@ const CreateBackground = () => {
     try {
       const response = await verifyBackgroundStatus(backgroundId.toString());
       console.log("Background status check:", response);
-
+      
       if (response.status === "confirmed" && response.background.blockchainId) {
         // Success! The background has been confirmed on the blockchain
         toast.success(
           <div>
             Background NFT successfully minted on blockchain!
             <br />
-            <a
-              href={`https://sepolia.etherscan.io/tx/${response.background.transactionHash}`}
-              target="_blank"
+            <a 
+              href={`https://sepolia.etherscan.io/tx/${response.background.transactionHash}`} 
+              target="_blank" 
               rel="noopener noreferrer"
               className="text-blue-500 underline"
             >
@@ -113,7 +80,7 @@ const CreateBackground = () => {
           </div>,
           { duration: 10000 }
         );
-
+        
         // Clear the pending background
         setPendingBackgroundId(null);
       } else if (response.status === "failed") {
@@ -122,6 +89,7 @@ const CreateBackground = () => {
         setPendingBackgroundId(null);
       }
       // For other statuses (pending, etc.), we'll continue polling
+      
     } catch (error) {
       console.error("Error checking background status:", error);
     }
@@ -145,34 +113,28 @@ const CreateBackground = () => {
     }
   };
 
-  // Function to handle wallet connection
   const handleConnectWallet = async () => {
     try {
       toast.loading("Connecting wallet...");
-
+      
       // For demo/development purposes - in production you'd use proper wallet connection
       // Get the user wallet address from MetaMask or similar
       const walletAddress = prompt(
         "Enter your wallet address (for development purposes):"
       );
-
+      
       if (!walletAddress) {
         toast.dismiss();
         toast.error("No wallet address provided");
         return;
       }
-
+      
       await connect(walletAddress);
-
+      
       toast.dismiss();
-<<<<<<< HEAD
-      toast.success('Wallet connected successfully!');
-=======
       toast.success("Wallet connected successfully!");
-
+      
       // Now open the dialog if they were trying to create a background
-      setDialogOpen(true);
->>>>>>> 761c210654d1bfdc924bb9c0afb7277aabcbf812
     } catch (error: any) {
       toast.dismiss();
       toast.error(error.message || "Failed to connect wallet");
@@ -200,7 +162,7 @@ const CreateBackground = () => {
           "error"
         );
         toast.error(`Authentication required: ${authStatus.message}`);
-
+        
         // Try to reconnect the wallet
         try {
           toast.loading("Reconnecting wallet...");
@@ -227,9 +189,9 @@ const CreateBackground = () => {
         artistAddress: address,
         image: image.name,
       });
-
+      
       toast.loading("Minting background NFT on the blockchain. Please wait...");
-
+      
       // Use the mintBackgroundNFT API service
       const response = await mintBackgroundNFT({
         image,
@@ -238,9 +200,9 @@ const CreateBackground = () => {
       });
 
       console.log("Background NFT minted:", response);
-
+      
       toast.dismiss();
-
+      
       // Handle both response formats - either nested or direct background object
       const background = response.background || response;
 
@@ -253,14 +215,14 @@ const CreateBackground = () => {
       } else if (background && background.transactionHash) {
         // Set the pending background ID for status polling
         setPendingBackgroundId(background.id);
-
+        
         toast.success(
           <div>
             Background NFT minting in progress...
             <br />
-            <a
-              href={`https://sepolia.etherscan.io/tx/${background.transactionHash}`}
-              target="_blank"
+            <a 
+              href={`https://sepolia.etherscan.io/tx/${background.transactionHash}`} 
+              target="_blank" 
               rel="noopener noreferrer"
               className="text-blue-500 underline"
             >
@@ -286,22 +248,12 @@ const CreateBackground = () => {
           </div>
         );
       }
-
+      
       // Reset form after successful submission
       setImage(null);
-<<<<<<< HEAD
-      setPreviewUrl('');
-      setCategory('');
-      setPrice('');
-    } catch (error: any) {
-      console.error('Error creating background:', error);
-      toast.dismiss();
-      toast.error(error.message || 'Failed to create background');
-=======
       setPreviewUrl("");
       setCategory("");
       setPrice("");
-      setDialogOpen(false);
     } catch (error: any) {
       console.error("Error minting background NFT:", error);
 
@@ -336,7 +288,6 @@ const CreateBackground = () => {
       } else {
         toast.error(errorMessage);
       }
->>>>>>> 761c210654d1bfdc924bb9c0afb7277aabcbf812
     } finally {
       setLoading(false);
     }
@@ -347,9 +298,9 @@ const CreateBackground = () => {
       {/* Background Effects */}
       <div className="fixed inset-0 grid-pattern opacity-10"></div>
       <div className="fixed inset-0 bg-gradient-radial from-primary/5 via-transparent to-transparent"></div>
-
+      
       <Navbar />
-
+      
       <div className="content-container relative z-10 pt-28 pb-20 max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -362,11 +313,10 @@ const CreateBackground = () => {
           <div className="h-1 w-20 bg-gradient-to-r from-primary to-secondary rounded-full" />
         </motion.div>
 
-<<<<<<< HEAD
         {!address ? (
           <div className="flex justify-center">
             <Button 
-              onClick={handleConnectWallet} 
+              onClick={handleConnectWallet}
               className="bg-gradient-to-r from-primary to-secondary text-white py-4 px-8 rounded-xl text-lg font-medium hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
             >
               Connect Wallet First
@@ -377,30 +327,8 @@ const CreateBackground = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
+            className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8"
           >
-=======
-        <div className="flex justify-center">
-          <Button
-            onClick={() =>
-              address ? setDialogOpen(true) : handleConnectWallet()
-            }
-            className="bg-gradient-to-r from-primary to-secondary text-white py-4 px-8 rounded-xl text-lg font-medium hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
-          >
-            {address ? "Create New Background" : "Connect Wallet First"}
-          </Button>
-        </div>
-
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="max-h-[90vh] overflow-y-auto">
-            <VisuallyHidden>
-              <DialogTitle>Create New Background</DialogTitle>
-            </VisuallyHidden>
-            <DialogDescription>
-              Upload an image and set its category and price to create a new
-              background.
-            </DialogDescription>
-
->>>>>>> 761c210654d1bfdc924bb9c0afb7277aabcbf812
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Image Upload */}
               <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
@@ -484,21 +412,8 @@ const CreateBackground = () => {
               </div>
 
               <div className="flex justify-end">
-<<<<<<< HEAD
-                <Button 
-                  type="submit" 
-=======
-                <Button
-                  type="button"
-                  onClick={() => setDialogOpen(false)}
-                  variant="outline"
-                  className="mr-4"
-                >
-                  Cancel
-                </Button>
                 <Button
                   type="submit"
->>>>>>> 761c210654d1bfdc924bb9c0afb7277aabcbf812
                   disabled={loading || !image || !category || !price}
                   className="bg-gradient-to-r from-primary to-secondary text-white hover:opacity-90 py-4 px-8 rounded-xl text-lg"
                 >
