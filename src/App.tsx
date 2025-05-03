@@ -22,7 +22,6 @@ import CreateBackground from "./pages/CreateBackground";
 import Debug from "./pages/Debug";
 import ProfilePage from "./pages/ProfilePage";
 import { User } from "lucide-react";
-import { AgentButton } from "./components/agent/AgentButton";
 
 const queryClient = new QueryClient();
 
@@ -34,7 +33,6 @@ const App = () => (
           <Toaster />
           <Sonner position="top-center" />
           <BrowserRouter>
-            <AgentButton />
             <Routes>
               <Route path="/" element={<Layout />}>
                 <Route index element={<Index />} />
