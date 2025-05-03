@@ -13,7 +13,7 @@ export const getApiBaseUrl = () => {
     console.warn("VITE_API_URL not found in environment, using default URL");
     baseUrl =
       import.meta.env.MODE === "development"
-        ? "http://localhost:8001"
+        ? "http://localhost:3001"
         : "http://localhost:3001";
   }
 
