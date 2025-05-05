@@ -2,6 +2,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { WalletProvider } from "./contexts/WalletContext";
+import { AgentButton } from "./components/agent/AgentButton";
 import Layout from "./components/Layout";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
@@ -33,6 +34,8 @@ const App = () => (
           <Toaster />
           <Sonner position="top-center" />
           <BrowserRouter>
+            {/* Add AgentButton here so it appears on all pages */}
+            <AgentButton />
             <Routes>
               <Route path="/" element={<Layout />}>
                 <Route index element={<Index />} />

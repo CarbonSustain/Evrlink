@@ -14,7 +14,7 @@ export const getApiBaseUrl = () => {
     baseUrl =
       import.meta.env.MODE === "development"
         ? "http://localhost:8001"
-        : "http://localhost:3001";
+        : "http://localhost:3000";
   }
 
   // Log the API base URL being used
