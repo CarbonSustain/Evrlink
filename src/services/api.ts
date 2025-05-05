@@ -5,16 +5,19 @@ import { authLog, apiLog } from "../utils/debug";
 
 // Get API base URL from environment or use fallback with improved error handling
 export const getApiBaseUrl = () => {
-  // First try Vite environment variable
+  // For development environment, use the proxy setup in vite.config.ts
+  if (import.meta.env.MODE === "development") {
+    console.log("Using development API proxy");
+    return ""; // Empty string will use relative URLs that go through the proxy
+  }
+  
+  // For production, use the environment variable
   let baseUrl = import.meta.env.VITE_API_URL;
 
   // If that's not available, use default
   if (!baseUrl) {
     console.warn("VITE_API_URL not found in environment, using default URL");
-    baseUrl =
-      import.meta.env.MODE === "development"
-        ? "http://localhost:8001"
-        : "http://localhost:3001";
+    baseUrl = "https://api.evrlink.com";
   }
 
   // Log the API base URL being used
