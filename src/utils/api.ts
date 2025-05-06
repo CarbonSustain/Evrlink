@@ -1049,36 +1049,29 @@ export const listGiftCards = async (
   }
 };
 
+export interface GiftCard {
+  id: string;
+  tokenId: string;
+  price: number;
+  status: 'available' | 'sold' | 'redeemed';
+  backgroundUrl: string;
+  message?: string;
+  currentOwner: string;
+  creatorAddress: string;
+  createdAt: string;
+  Background?: {
+    id: string;
+    imageURI: string;
+    category: string;
+  };
+}
+
 export interface ProfileResponse {
   success: boolean;
   profile: {
     address: string;
-    receivedCards: Array<{
-      id: string;
-      tokenId: string;
-      price: number;
-      status: 'available' | 'sold' | 'redeemed';
-      backgroundUrl: string;
-      message?: string;
-      Background: {
-        id: string;
-        imageURI: string;
-        category: string;
-      };
-    }>;
-    sentCards: Array<{
-      id: string;
-      tokenId: string;
-      price: number;
-      status: 'available' | 'sold' | 'redeemed';
-      backgroundUrl: string;
-      message?: string;
-      Background: {
-        id: string;
-        imageURI: string;
-        category: string;
-      };
-    }>;
+    receivedCards: GiftCard[];
+    sentCards: GiftCard[];
   };
 }
 
