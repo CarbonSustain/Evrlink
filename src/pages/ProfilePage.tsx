@@ -8,6 +8,33 @@ import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getUserProfile, getDetailedProfile, GiftCard } from '@/utils/api';
 
+interface UserStats {
+  totalGiftCardsCreated: number;
+  totalGiftCardsSent: number;
+  totalGiftCardsReceived: number;
+  totalBackgroundsMinted: number;
+}
+
+interface UserProfileData {
+  username: string;
+  stats: UserStats;
+}
+
+interface MappedGiftCard {
+  id: string;
+  imageUrl: string;
+  senderName: string;
+  recipientName: string;
+  message: string;
+  amount: string;
+  date: string;
+  status: 'Sent' | 'Received';
+}
+
+interface GiftCardItemProps {
+  gift: MappedGiftCard;
+}
+
 export const ProfilePage = () => {
   const { address, isConnected, connect } = useWallet();
   const [selectedGift, setSelectedGift] = useState(null);
@@ -31,6 +58,9 @@ export const ProfilePage = () => {
             getDetailedProfile(address)
           ]);
 
+          console.log('Profile Data:', profileData);
+          console.log('Detailed Profile:', detailedProfile);
+
           setUserProfile({
             username: profileData.data.username,
             stats: {
@@ -41,26 +71,36 @@ export const ProfilePage = () => {
             }
           });
 
-          // Set sent and received gifts from detailed profile
-          setSentGifts(detailedProfile.profile.sentCards.map((card: GiftCard) => ({
+          // Map received cards
+          const mappedReceivedCards = detailedProfile.profile.receivedCards.map((card: GiftCard) => ({
             id: card.id,
             imageUrl: card.Background?.imageURI || card.backgroundUrl,
-            recipientName: card.currentOwner,
+            senderName: card.creatorAddress?.slice(0, 6) + '...' + card.creatorAddress?.slice(-4),
+            recipientName: card.currentOwner?.slice(0, 6) + '...' + card.currentOwner?.slice(-4),
             message: card.message || '',
             amount: `${card.price} ETH`,
             date: new Date(card.createdAt).toISOString().split('T')[0],
-            status: card.status
-          })));
+            status: 'Received'
+          }));
 
-          setReceivedGifts(detailedProfile.profile.receivedCards.map((card: GiftCard) => ({
+          // Map sent cards
+          const mappedSentCards = detailedProfile.profile.sentCards.map((card: GiftCard) => ({
             id: card.id,
             imageUrl: card.Background?.imageURI || card.backgroundUrl,
-            senderName: card.creatorAddress,
+            senderName: card.creatorAddress?.slice(0, 6) + '...' + card.creatorAddress?.slice(-4),
+            recipientName: card.currentOwner?.slice(0, 6) + '...' + card.currentOwner?.slice(-4),
             message: card.message || '',
             amount: `${card.price} ETH`,
             date: new Date(card.createdAt).toISOString().split('T')[0],
-            status: card.status
-          })));
+            status: 'Sent'
+          }));
+
+          console.log('Mapped Received Cards:', mappedReceivedCards);
+          console.log('Mapped Sent Cards:', mappedSentCards);
+
+          setSentGifts(mappedSentCards);
+          setReceivedGifts(mappedReceivedCards);
+
         } catch (error) {
           console.error('Error fetching profile data:', error);
           setError(error instanceof Error ? error.message : 'Failed to load profile data');
@@ -125,7 +165,7 @@ export const ProfilePage = () => {
     );
   }
 
-  const GiftCardItem = ({ gift }) => (
+  const GiftCardItem = ({ gift }: GiftCardItemProps) => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -159,13 +199,23 @@ export const ProfilePage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-white/90">
-                    {gift.status === 'Sent' ? `To: ${gift.recipientName}` : `From: ${gift.senderName}`}
+                    {gift.status === 'Sent' ? (
+                      <>To: {gift.recipientName}</>
+                    ) : (
+                      <>From: {gift.senderName}</>
+                    )}
                   </p>
                   <p className="text-xs text-white/60">{gift.date}</p>
+                  {gift.message && (
+                    <p className="text-xs text-white/70 mt-1 italic">"{gift.message}"</p>
+                  )}
                 </div>
-                <p className="text-sm font-medium bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
-                  {gift.amount}
-                </p>
+                <div className="text-right">
+                  <p className="text-sm font-medium bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
+                    {gift.amount}
+                  </p>
+                  <p className="text-xs text-white/60">{gift.status}</p>
+                </div>
               </div>
             </div>
           </div>
