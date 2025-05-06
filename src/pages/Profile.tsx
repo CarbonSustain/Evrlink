@@ -7,7 +7,7 @@ import { Settings, Share2 } from 'lucide-react';
 import MyGiftCards from './MyGiftCards';
 import OwnedNFTs from '@/components/OwnedNFTs';
 import { useWallet } from '@/contexts/WalletContext';
-import { getUserProfile, getGiftCards, getBackgrounds } from '@/utils/api';
+import { getUserProfile, getDetailedProfile, getUserBackgrounds } from '@/utils/api';
 import { CircularProgress, Alert, Card, CardContent, Typography } from '@mui/material';
 
 interface UserProfile {
@@ -30,6 +30,11 @@ interface GiftCard {
   status: 'available' | 'sold' | 'redeemed';
   backgroundUrl: string;
   message?: string;
+  Background?: {
+    id: string;
+    imageURI: string;
+    category: string;
+  };
 }
 
 interface Background {
@@ -43,7 +48,8 @@ interface Background {
 const Profile = () => {
   const { address, isConnected } = useWallet();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [giftCards, setGiftCards] = useState<GiftCard[]>([]);
+  const [receivedCards, setReceivedCards] = useState<GiftCard[]>([]);
+  const [sentCards, setSentCards] = useState<GiftCard[]>([]);
   const [backgrounds, setBackgrounds] = useState<Background[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,21 +65,17 @@ const Profile = () => {
         setLoading(true);
         setError(null);
 
-        // Fetch user profile
-        const profileData = await getUserProfile(address);
-        setUserProfile(profileData);
+        // Fetch user profile and detailed profile data in parallel
+        const [profileData, detailedProfile, backgroundsData] = await Promise.all([
+          getUserProfile(address),
+          getDetailedProfile(address),
+          getUserBackgrounds(address)
+        ]);
 
-        // Fetch user's gift cards
-        const giftCardsData = await getGiftCards({
-          page: 1,
-          limit: 10,
-          status: 'available'
-        });
-        setGiftCards(giftCardsData.giftCards || []);
-
-        // Fetch backgrounds
-        const backgroundsData = await getBackgrounds();
-        setBackgrounds(backgroundsData.backgrounds || []);
+        setUserProfile(profileData.data);
+        setReceivedCards(detailedProfile.profile.receivedCards);
+        setSentCards(detailedProfile.profile.sentCards);
+        setBackgrounds(backgroundsData.data || []);
 
       } catch (err) {
         console.error('Error fetching profile data:', err);
@@ -85,6 +87,36 @@ const Profile = () => {
 
     fetchData();
   }, [address, isConnected]);
+
+  const renderGiftCardGrid = (cards: GiftCard[]) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      {cards.map((card) => (
+        <Card key={card.id} className="bg-[#1a1a1a] text-white">
+          <img 
+            src={card.Background?.imageURI || card.backgroundUrl} 
+            alt="Gift Card" 
+            className="w-full h-48 object-cover"
+          />
+          <CardContent>
+            <Typography variant="h6" component="div">
+              Gift Card #{card.tokenId}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Price: {card.price} ETH
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Status: {card.status}
+            </Typography>
+            {card.message && (
+              <Typography variant="body2" color="text.secondary" className="mt-2">
+                Message: {card.message}
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
 
   if (!isConnected || !address) {
     return (
@@ -159,10 +191,16 @@ const Profile = () => {
                 Inventory
               </TabsTrigger>
               <TabsTrigger 
-                value="giftcards" 
+                value="received" 
                 className="px-6 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-white data-[state=active]:bg-transparent"
               >
-                Gift Cards
+                Received Cards
+              </TabsTrigger>
+              <TabsTrigger 
+                value="sent" 
+                className="px-6 py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-white data-[state=active]:bg-transparent"
+              >
+                Sent Cards
               </TabsTrigger>
               <TabsTrigger 
                 value="backgrounds" 
@@ -179,31 +217,25 @@ const Profile = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="giftcards">
+            <TabsContent value="received">
               <div className="mb-8">
-                <h3 className="text-xl font-medium text-white mb-4">Your Gift Cards</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {giftCards.map((card) => (
-                    <Card key={card.id} className="bg-[#1a1a1a] text-white">
-                      <img 
-                        src={card.backgroundUrl} 
-                        alt="Gift Card" 
-                        className="w-full h-48 object-cover"
-                      />
-                      <CardContent>
-                        <Typography variant="h6" component="div">
-                          Gift Card #{card.tokenId}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Price: {card.price} ETH
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Status: {card.status}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                <h3 className="text-xl font-medium text-white mb-4">Received Gift Cards</h3>
+                {receivedCards.length > 0 ? (
+                  renderGiftCardGrid(receivedCards)
+                ) : (
+                  <p className="text-gray-400">No received gift cards yet.</p>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="sent">
+              <div className="mb-8">
+                <h3 className="text-xl font-medium text-white mb-4">Sent Gift Cards</h3>
+                {sentCards.length > 0 ? (
+                  renderGiftCardGrid(sentCards)
+                ) : (
+                  <p className="text-gray-400">No sent gift cards yet.</p>
+                )}
               </div>
             </TabsContent>
 

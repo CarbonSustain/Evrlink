@@ -1048,3 +1048,57 @@ export const listGiftCards = async (
     };
   }
 };
+
+export interface ProfileResponse {
+  success: boolean;
+  profile: {
+    address: string;
+    receivedCards: Array<{
+      id: string;
+      tokenId: string;
+      price: number;
+      status: 'available' | 'sold' | 'redeemed';
+      backgroundUrl: string;
+      message?: string;
+      Background: {
+        id: string;
+        imageURI: string;
+        category: string;
+      };
+    }>;
+    sentCards: Array<{
+      id: string;
+      tokenId: string;
+      price: number;
+      status: 'available' | 'sold' | 'redeemed';
+      backgroundUrl: string;
+      message?: string;
+      Background: {
+        id: string;
+        imageURI: string;
+        category: string;
+      };
+    }>;
+  };
+}
+
+export const getDetailedProfile = async (address: string): Promise<ProfileResponse> => {
+  console.log('Fetching detailed profile for address:', address);
+  try {
+    const response = await fetchWithRetry(`${API_BASE_URL}${API_PREFIX}/profile/${address}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch profile: ${response.status}`);
+    }
+
+    const data = await handleApiResponse(response);
+    console.log('Detailed profile data:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching detailed profile:', error);
+    throw error;
+  }
+};
