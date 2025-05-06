@@ -10,13 +10,14 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8001,
     proxy: {
-      "/api": {
-        target: "https://api.evrlink.com",
+      // Proxy API requests to bypass CORS during development
+      '/api': {
+        target: 'https://api.evrlink.com',
         changeOrigin: true,
-        secure: false,
-        ws: true,
-      },
-    },
+        secure: true,
+        rewrite: (path) => path
+      }
+    }
   },
   plugins: [
     react(),

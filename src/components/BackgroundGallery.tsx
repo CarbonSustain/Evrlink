@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import Button from '@/components/Button';
 import { Background } from '@/services/api';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '@/config';
+import { getSignedS3Url, extractFilenameFromUrl } from '@/utils/s3Helpers';
 
 interface BackgroundGalleryProps {
   backgrounds: Background[];
@@ -14,32 +15,62 @@ interface BackgroundGalleryProps {
   emptyStateMessage?: string;
 }
 
-// Helper function to get proper image URL
-const getImageUrl = (imageURI: string): string => {
+interface ImageUrlCache {
+  [key: string]: {
+    url: string;
+    expiresAt: number;
+  };
+}
+
+// URL cache to avoid generating new signed URLs unnecessarily
+const urlCache: ImageUrlCache = {};
+
+const getImageUrl = async (imageURI: string): Promise<string> => {
   if (!imageURI) return '';
 
-  // If it's a full URL (either S3 or API), try S3 first
-  if (imageURI.startsWith('http')) {
-    // Extract just the filename (timestamp.ext) from the URL
-    const match = imageURI.match(/([0-9]+\.[a-zA-Z]+)$/);
-    if (match) {
-      const filename = match[1];
-      // Return the S3 URL
-      return `${import.meta.env.VITE_REACT_APP_S3_BUCKET_URL}/${filename}`;
-    }
-    // If we can't extract the filename, return the original URL
-    return imageURI;
+  // Check if we have a cached URL that hasn't expired
+  if (urlCache[imageURI] && urlCache[imageURI].expiresAt > Date.now()) {
+    return urlCache[imageURI].url;
   }
 
-  // For relative paths (e.g., just the filename)
-  const filename = imageURI.split('/').pop() || '';
-  if (!filename) return '';
+  try {
+    let filename = '';
+    
+    if (imageURI.startsWith('http')) {
+      // Extract filename from URL
+      filename = extractFilenameFromUrl(imageURI);
+      if (!filename) return imageURI; // If we can't extract the filename, return the original URL
+    } else {
+      // For relative paths (e.g., just the filename)
+      filename = imageURI.split('/').pop() || '';
+      if (!filename) return '';
+      
+      // If no extension, default to jpeg
+      filename = filename.includes('.') ? filename : `${filename}.jpeg`;
+    }
 
-  // If no extension, default to jpeg
-  const finalFilename = filename.includes('.') ? filename : `${filename}.jpeg`;
-
-  // Return the S3 URL
-  return `${import.meta.env.VITE_REACT_APP_S3_BUCKET_URL}/${finalFilename}`;
+    // Generate signed URL for S3 access
+    const signedUrl = await getSignedS3Url(filename);
+    
+    // Cache the URL with an expiry time slightly shorter than the actual signed URL expiry
+    // (default is 1 hour, so we cache for 50 minutes)
+    urlCache[imageURI] = {
+      url: signedUrl,
+      expiresAt: Date.now() + 50 * 60 * 1000 // 50 minutes
+    };
+    
+    return signedUrl;
+  } catch (error) {
+    console.error('Error getting signed URL:', error);
+    
+    // Fallback to API URL if S3 URL generation fails
+    const filename = extractFilenameFromUrl(imageURI);
+    if (filename) {
+      return `${API_BASE_URL}/uploads/${filename}`;
+    }
+    
+    return '';
+  }
 };
 
 const BackgroundGallery: React.FC<BackgroundGalleryProps> = ({
@@ -50,8 +81,42 @@ const BackgroundGallery: React.FC<BackgroundGalleryProps> = ({
   emptyStateMessage = 'No backgrounds found in this category'
 }) => {
   const navigate = useNavigate();
+  const [imageUrls, setImageUrls] = useState<{ [key: string]: string }>({});
+  const [loadingImages, setLoadingImages] = useState(true);
 
-  if (isLoading) {
+  // Load signed URLs for all backgrounds when component mounts or backgrounds change
+  useEffect(() => {
+    const loadImageUrls = async () => {
+      if (!backgrounds.length) {
+        setLoadingImages(false);
+        return;
+      }
+
+      setLoadingImages(true);
+      
+      try {
+        const urlPromises = backgrounds.map(async (background) => {
+          if (!background.imageURI) return [background.id, ''];
+          
+          const url = await getImageUrl(background.imageURI);
+          return [background.id, url];
+        });
+        
+        const urlResults = await Promise.all(urlPromises);
+        const urlMap = Object.fromEntries(urlResults);
+        
+        setImageUrls(urlMap);
+      } catch (error) {
+        console.error('Error loading image URLs:', error);
+      } finally {
+        setLoadingImages(false);
+      }
+    };
+
+    loadImageUrls();
+  }, [backgrounds]);
+
+  if (isLoading || loadingImages) {
     return (
       <div className="flex justify-center items-center py-20">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -91,7 +156,7 @@ const BackgroundGallery: React.FC<BackgroundGalleryProps> = ({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {backgrounds.map((background, index) => {
-        const imageUrl = getImageUrl(background.imageURI);
+        const imageUrl = imageUrls[background.id] || '/placeholder-loading.jpg';
           
         return (
           <motion.div
@@ -111,17 +176,8 @@ const BackgroundGallery: React.FC<BackgroundGalleryProps> = ({
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     const currentSrc = target.src;
-
-                    // If this was an S3 URL that failed, try the API URL
-                    if (currentSrc.includes('s3.amazonaws.com')) {
-                      const filename = currentSrc.split('/').pop();
-                      if (filename) {
-                        target.src = `${API_BASE_URL}/uploads/${filename}`;
-                        return;
-                      }
-                    }
-
-                    // If API URL also fails or we couldn't get filename, use placeholder
+                  
+                    // If all fails, use placeholder
                     target.onerror = null; // Prevent infinite loop
                     target.src = '/placeholder.jpg';
                     console.error(`Failed to load image: ${currentSrc}`);
