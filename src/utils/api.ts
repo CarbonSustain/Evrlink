@@ -282,14 +282,14 @@ export interface UserProfileData {
 export const getUserProfile = async (
   address: string
 ): Promise<ApiResponse<UserProfileData>> => {
-  // First try to create the user if they don't exist
-  await createUserIfNotExists(address);
+  if (!address) {
+    throw new Error('Wallet address is required');
+  }
 
-  const url = `${API_BASE_URL}/users/${address}`;
+  const url = `${API_BASE_URL}/api/user/${address}`;
   console.log("Fetching user profile from:", url);
 
   try {
-    // Use fetchWithRetry to improve reliability
     const response = await fetchWithRetry(url, {
       headers: getAuthHeaders(),
     });
@@ -300,36 +300,18 @@ export const getUserProfile = async (
         status: response.status,
         error: errorText,
       });
-
-      // Create default profile for any error
-      return {
-        success: true,
-        data: {
-          id: null,
-          walletAddress: address,
-          username: `${address.slice(0, 6)}...${address.slice(-4)}`,
-          bio: "",
-          profileImageUrl: "",
-          stats: {
-            totalGiftCardsCreated: 0,
-            totalGiftCardsSent: 0,
-            totalGiftCardsReceived: 0,
-            totalBackgroundsMinted: 0,
-          },
-        },
-      };
+      throw new Error(`Failed to fetch profile: ${response.status} ${errorText}`);
     }
 
     const data = await response.json();
-    console.log("User profile data received:", data);
+    console.log("User profile API response:", data);
 
     return {
       success: true,
       data: {
         id: data.id || null,
         walletAddress: data.walletAddress || address,
-        username:
-          data.username || `${address.slice(0, 6)}...${address.slice(-4)}`,
+        username: data.username || `${address.slice(0, 6)}...${address.slice(-4)}`,
         bio: data.bio || "",
         profileImageUrl: data.profileImageUrl || "",
         stats: {
@@ -341,24 +323,8 @@ export const getUserProfile = async (
       },
     };
   } catch (error) {
-    console.error("Error fetching user profile:", error);
-    // Return default profile for any error
-    return {
-      success: true,
-      data: {
-        id: null,
-        walletAddress: address,
-        username: `${address.slice(0, 6)}...${address.slice(-4)}`,
-        bio: "",
-        profileImageUrl: "",
-        stats: {
-          totalGiftCardsCreated: 0,
-          totalGiftCardsSent: 0,
-          totalGiftCardsReceived: 0,
-          totalBackgroundsMinted: 0,
-        },
-      },
-    };
+    console.error("Error in getUserProfile:", error);
+    throw error;
   }
 };
 
@@ -794,80 +760,37 @@ export const getUserGiftCards = async (
 export const getUserBackgrounds = async (
   address: string
 ): Promise<ApiResponse<any[]>> => {
+  if (!address) {
+    throw new Error('Wallet address is required');
+  }
+
+  const url = `${API_BASE_URL}/backgrounds?creator=${address}`;
+  console.log('Fetching user backgrounds from:', url);
+
   try {
-    const url = `${API_BASE_URL}/backgrounds?creator=${address}`;
-    console.log("Fetching user backgrounds from:", url);
+    const response = await fetchWithRetry(url, {
+      headers: getAuthHeaders(),
+    });
 
-    try {
-      const response = await fetchWithRetry(url, {
-        headers: getAuthHeaders(),
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Backgrounds fetch error:", {
+        status: response.status,
+        error: errorText,
       });
-      console.log("Backgrounds list response:", response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Failed to fetch backgrounds:", errorText);
-
-        // For development, return mock data
-        return {
-          success: true,
-          data: [
-            {
-              id: "bg-001",
-              artistAddress: address,
-              imageURI: "https://placehold.co/400x300?text=Background",
-              category: "nature",
-              price: "0.05",
-              usageCount: 3,
-              createdAt: new Date().toISOString(),
-            },
-            {
-              id: "bg-002",
-              artistAddress: address,
-              imageURI: "https://placehold.co/400x300?text=Background+2",
-              category: "abstract",
-              price: "0.1",
-              usageCount: 1,
-              createdAt: new Date(Date.now() - 86400000).toISOString(),
-            },
-          ],
-        };
-      }
-
-      const data = await response.json();
-      return {
-        success: true,
-        data: data.backgrounds || [],
-      };
-    } catch (error) {
-      console.error("Error fetching backgrounds:", error);
-      return {
-        success: true,
-        data: [
-          {
-            id: "bg-001",
-            artistAddress: address,
-            imageURI: "https://placehold.co/400x300?text=Background",
-            category: "nature",
-            price: "0.05",
-            usageCount: 3,
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: "bg-002",
-            artistAddress: address,
-            imageURI: "https://placehold.co/400x300?text=Background+2",
-            category: "abstract",
-            price: "0.1",
-            usageCount: 1,
-            createdAt: new Date(Date.now() - 86400000).toISOString(),
-          },
-        ],
-      };
+      throw new Error(`Failed to fetch backgrounds: ${response.status} ${errorText}`);
     }
+
+    const data = await response.json();
+    console.log('Backgrounds API response:', data);
+
+    return {
+      success: true,
+      data: data.backgrounds || [],
+    };
   } catch (error) {
-    console.error("Error in getUserBackgrounds:", error);
-    return { success: false, error: "Failed to fetch backgrounds" };
+    console.error('Error in getUserBackgrounds:', error);
+    throw error;
   }
 };
 
@@ -1075,23 +998,41 @@ export interface ProfileResponse {
   };
 }
 
+/**
+ * Get detailed profile including sent/received cards
+ */
 export const getDetailedProfile = async (address: string): Promise<ProfileResponse> => {
-  console.log('Fetching detailed profile for address:', address);
+  if (!address) {
+    throw new Error('Wallet address is required');
+  }
+
+  const url = `${API_BASE_URL}/api/profile/${address}`;
+  console.log('Fetching detailed profile from:', url);
+
   try {
-    const response = await fetchWithRetry(`${API_BASE_URL}${API_PREFIX}/profile/${address}`, {
-      method: 'GET',
+    const response = await fetchWithRetry(url, {
       headers: getAuthHeaders(),
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch profile: ${response.status}`);
+      const errorText = await response.text();
+      console.error("Detailed profile fetch error:", {
+        status: response.status,
+        error: errorText,
+      });
+      throw new Error(`Failed to fetch detailed profile: ${response.status} ${errorText}`);
     }
 
-    const data = await handleApiResponse(response);
-    console.log('Detailed profile data:', data);
+    const data = await response.json();
+    console.log('Detailed profile API response:', data);
+
+    if (!data.success || !data.profile) {
+      throw new Error('Invalid response format from detailed profile API');
+    }
+
     return data;
   } catch (error) {
-    console.error('Error fetching detailed profile:', error);
+    console.error('Error in getDetailedProfile:', error);
     throw error;
   }
 };

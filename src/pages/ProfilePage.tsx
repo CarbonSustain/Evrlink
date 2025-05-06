@@ -101,6 +101,7 @@ export const ProfilePage = () => {
           setSentGifts(mappedSentCards);
           setReceivedGifts(mappedReceivedCards);
 
+
         } catch (error) {
           console.error('Error fetching profile data:', error);
           setError(error instanceof Error ? error.message : 'Failed to load profile data');

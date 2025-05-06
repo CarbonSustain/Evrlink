@@ -60,31 +60,57 @@ const Profile = () => {
   useEffect(() => {
     const fetchData = async () => {
       if (!address || !isConnected) {
+        console.log('No address or not connected, skipping profile fetch');
         setLoading(false);
         return;
       }
 
+      console.log('Starting profile data fetch for address:', address);
       try {
         setLoading(true);
         setError(null);
 
+        // Log API base URL and endpoints being called
+        console.log('API calls starting with following endpoints:');
+        console.log(`- getUserProfile: ${process.env.VITE_API_URL}/api/user/${address}`);
+        console.log(`- getDetailedProfile: ${process.env.VITE_API_URL}/api/profile/${address}`);
+        console.log(`- getUserBackgrounds: ${process.env.VITE_API_URL}/backgrounds?creator=${address}`);
+
         // Fetch user profile and detailed profile data in parallel
         const [profileData, detailedProfile, backgroundsData] = await Promise.all([
-          getUserProfile(address),
-          getDetailedProfile(address),
-          getUserBackgrounds(address)
+          getUserProfile(address).catch(err => {
+            console.error('getUserProfile error:', err);
+            throw new Error(`Failed to fetch basic profile: ${err.message}`);
+          }),
+          getDetailedProfile(address).catch(err => {
+            console.error('getDetailedProfile error:', err);
+            throw new Error(`Failed to fetch detailed profile: ${err.message}`);
+          }),
+          getUserBackgrounds(address).catch(err => {
+            console.error('getUserBackgrounds error:', err);
+            throw new Error(`Failed to fetch backgrounds: ${err.message}`);
+          })
         ]);
 
-        console.log('Profile Data:', profileData);
-        console.log('Detailed Profile:', detailedProfile);
+        console.log('Profile Data Response:', profileData);
+        console.log('Detailed Profile Response:', detailedProfile);
+        console.log('Backgrounds Data Response:', backgroundsData);
+
+        if (!profileData.data) {
+          throw new Error('Profile data is missing or invalid');
+        }
+
+        if (!detailedProfile.profile) {
+          throw new Error('Detailed profile data is missing or invalid');
+        }
 
         setUserProfile(profileData.data);
-        setReceivedCards(detailedProfile.profile.receivedCards);
-        setSentCards(detailedProfile.profile.sentCards);
+        setReceivedCards(detailedProfile.profile.receivedCards || []);
+        setSentCards(detailedProfile.profile.sentCards || []);
         setBackgrounds(backgroundsData.data || []);
 
       } catch (err) {
-        console.error('Error fetching profile data:', err);
+        console.error('Error in profile data fetch:', err);
         setError(err instanceof Error ? err.message : 'Failed to load profile data');
       } finally {
         setLoading(false);
