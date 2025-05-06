@@ -7,6 +7,7 @@ import GiftCardDetailsDialog from '@/components/GiftCardDetailsDialog';
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getUserProfile, getDetailedProfile, GiftCard } from '@/utils/api';
+import { API_BASE_URL } from '@/services/api';
 
 interface UserStats {
   totalGiftCardsCreated: number;
@@ -34,6 +35,20 @@ interface MappedGiftCard {
 interface GiftCardItemProps {
   gift: MappedGiftCard;
 }
+
+const getImageUrl = (imageURI: string): string => {
+  if (imageURI.startsWith("http")) {
+    return imageURI; // S3 URL
+  }
+  // Convert Windows backslashes to forward slashes
+  const normalizedPath = imageURI.replace(/\\\\/g, "/").replace(/\\/g, "/");
+  // Remove any leading slashes to avoid double slashes in the URL
+  const cleanPath = normalizedPath.replace(/^\/+/, "");
+  // Construct the full URL using API_BASE_URL
+  const fullUrl = `${API_BASE_URL}/${cleanPath}`;
+  console.log("Constructed image URL:", fullUrl, "from:", imageURI);
+  return fullUrl;
+};
 
 export const ProfilePage = () => {
   const { address, isConnected, connect } = useWallet();
@@ -74,7 +89,7 @@ export const ProfilePage = () => {
           // Map received cards
           const mappedReceivedCards = detailedProfile.profile.receivedCards.map((card: GiftCard) => ({
             id: card.id,
-            imageUrl: card.Background?.imageURI || card.backgroundUrl,
+            imageUrl: getImageUrl(card.Background?.imageURI || card.backgroundUrl),
             senderName: card.creatorAddress?.slice(0, 6) + '...' + card.creatorAddress?.slice(-4),
             recipientName: card.currentOwner?.slice(0, 6) + '...' + card.currentOwner?.slice(-4),
             message: card.message || '',
@@ -86,7 +101,7 @@ export const ProfilePage = () => {
           // Map sent cards
           const mappedSentCards = detailedProfile.profile.sentCards.map((card: GiftCard) => ({
             id: card.id,
-            imageUrl: card.Background?.imageURI || card.backgroundUrl,
+            imageUrl: getImageUrl(card.Background?.imageURI || card.backgroundUrl),
             senderName: card.creatorAddress?.slice(0, 6) + '...' + card.creatorAddress?.slice(-4),
             recipientName: card.currentOwner?.slice(0, 6) + '...' + card.currentOwner?.slice(-4),
             message: card.message || '',
