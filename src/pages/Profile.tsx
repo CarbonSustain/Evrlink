@@ -21,6 +21,9 @@ interface UserProfile {
   totalGiftCardsSent?: number;
   totalGiftCardsReceived?: number;
   totalBackgroundsMinted?: number;
+  stats?: {
+    // Add any other necessary properties here
+  };
 }
 
 interface GiftCard {
@@ -71,6 +74,9 @@ const Profile = () => {
           getDetailedProfile(address),
           getUserBackgrounds(address)
         ]);
+
+        console.log('Profile Data:', profileData);
+        console.log('Detailed Profile:', detailedProfile);
 
         setUserProfile(profileData.data);
         setReceivedCards(detailedProfile.profile.receivedCards);
@@ -225,7 +231,7 @@ const Profile = () => {
                 ) : (
                   <p className="text-gray-400">No received gift cards yet.</p>
                 )}
-              </div>
+                </div>
             </TabsContent>
 
             <TabsContent value="sent">
