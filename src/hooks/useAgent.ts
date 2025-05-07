@@ -50,8 +50,8 @@ async function messageAgent(userMessage: string, offlineMode: boolean = false, u
   }
 
   try {
-    // Try the enhanced AgentKit chatbot endpoint first (running on port 3000)
-    const chatbotUrl = "http://localhost:3000/api/agent";
+    // Use a relative URL for the chatbot endpoint so it works on both local and deployed environments
+    const chatbotUrl = "/api/agent";
     
     console.log("Connecting to enhanced AgentKit chatbot at:", chatbotUrl);
     console.log("Sending message:", userMessage);
