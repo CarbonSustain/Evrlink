@@ -4,11 +4,14 @@ import { API_BASE_URL } from "../services/api";
 
 // Offline mode responses for common questions
 const OFFLINE_RESPONSES: Record<string, string> = {
-  "how do i create a gift card": "To create a gift card in Evrlink, go to the 'Create' page, select a background, enter the recipient details, and specify the amount. You can then mint the gift card as an NFT.",
-  "what blockchain networks are supported": "Evrlink currently supports Ethereum, Polygon, and Base networks. You can select your preferred network when connecting your wallet.",
-  "how do i connect my wallet": "To connect your wallet, click on the 'Connect Wallet' button in the top right corner. Evrlink supports MetaMask, WalletConnect, and Coinbase Wallet.",
-  "tell me about nft backgrounds": "NFT backgrounds in Evrlink are customizable images that appear behind your gift cards. You can select from pre-made backgrounds or create your own in the 'Create Background' section.",
-  "default": "I'm currently in offline mode. When connected to the backend, I can provide more detailed assistance with Evrlink features and functionality."
+  "how do i create a gift card": "To create a gift card in Evrlink, go to the 'Create' page, select a background, enter the recipient details, and specify the amount. You can then mint the gift card as an NFT. Gift cards can be personalized with custom messages and backgrounds to make them more special.",
+  "what blockchain networks are supported": "Evrlink currently supports Ethereum, Polygon, and Base networks. You can select your preferred network when connecting your wallet. Base Sepolia is our recommended testnet for trying out features without spending real crypto.",
+  "how do i connect my wallet": "To connect your wallet, click on the 'Connect Wallet' button in the top right corner. Evrlink supports MetaMask, WalletConnect, and Coinbase Wallet. Make sure you have one of these wallets installed before attempting to connect.",
+  "tell me about nft backgrounds": "NFT backgrounds in Evrlink are customizable images that appear behind your gift cards. You can select from pre-made backgrounds or create your own in the 'Create Background' section. Artists can also mint and sell their own background designs on the platform.",
+  "what is evrlink": "Evrlink is a platform that allows you to create and send digital gift cards as NFTs on the blockchain. It combines the personalization of traditional gift cards with the security and ownership benefits of blockchain technology.",
+  "how do i claim a gift card": "To claim a gift card, you'll need the gift card ID and the secret code provided by the sender. Go to the 'Claim a Gift' page, enter these details, and connect your wallet to receive the gift card as an NFT.",
+  "fees": "Evrlink charges minimal fees for creating and transferring gift cards. The exact fee depends on the blockchain network you're using and current gas prices. We strive to keep our platform affordable for all users.",
+  "default": "I'm currently in offline mode, but I can still help with common questions about Evrlink. You can ask about creating gift cards, supported blockchain networks, connecting wallets, backgrounds, claiming gifts, and platform fees."
 };
 
 // Find the best matching response for a query
@@ -120,8 +123,8 @@ export function useAgent(userId: string = `user_${Math.random().toString(36).sub
   });
   
   const [isThinking, setIsThinking] = useState(false);
-  // Default to online mode (false) to use the backend onchain agent
-  const [isOfflineMode, setIsOfflineMode] = useState(false);
+  // Default to offline mode (true) since the backend API might not be available
+  const [isOfflineMode, setIsOfflineMode] = useState(true);
 
   // Save messages to localStorage whenever they change
   useEffect(() => {

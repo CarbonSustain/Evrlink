@@ -3,7 +3,7 @@ import { AgentChat } from "./AgentChat";
 
 export const AgentButton = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [useEmbeddedChatbot, setUseEmbeddedChatbot] = useState(true); // Default to embedded chatbot implementation
+  const [useEmbeddedChatbot, setUseEmbeddedChatbot] = useState(false); // Default to local implementation instead of embedded chatbot
   const [isMinimized, setIsMinimized] = useState(false);
   
   // Generate a consistent user ID for this user
