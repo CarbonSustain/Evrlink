@@ -61,7 +61,7 @@ export const AgentButton = () => {
                 </div>
               </div>
               <iframe 
-                src="/" 
+                src="/api/agent" 
                 className="w-full flex-grow border-0"
                 title="Enhanced AgentKit Chatbot"
               />
