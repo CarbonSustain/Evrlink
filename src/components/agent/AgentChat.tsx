@@ -58,7 +58,10 @@ const SUGGESTED_PROMPTS = [
   "How do I create a gift card?",
   "What blockchain networks are supported?",
   "How do I connect my wallet?",
-  "Tell me about NFT backgrounds"
+  "Tell me about NFT backgrounds",
+  "What is Evrlink?",
+  "How do I claim a gift card?",
+  "What are the fees?"
 ];
 
 // Main agent chat component props
@@ -73,6 +76,13 @@ export const AgentChat = ({ userId: propUserId }: AgentChatProps = {}) => {
   const { messages, sendMessage, isThinking, clearHistory, isOfflineMode, toggleOfflineMode } = useAgent(userId);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Add welcome message when component mounts if there are no messages
+  useEffect(() => {
+    if (messages.length === 0) {
+      sendMessage("Hello! I'm the Evrlink Assistant. How can I help you today?");
+    }
+  }, []);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
