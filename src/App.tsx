@@ -1,7 +1,8 @@
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { WalletProvider } from "./contexts/WalletContext";
+import { AuthProvider } from "./contexts/AuthContext";
 import { AgentButton } from "./components/agent/AgentButton";
 import Layout from "./components/Layout";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -23,48 +24,77 @@ import CreateBackground from "./pages/CreateBackground";
 import Debug from "./pages/Debug";
 import ProfilePage from "./pages/ProfilePage";
 import { User } from "lucide-react";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
+
+// Protected Route component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+};
 
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <WalletProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner position="top-center" />
-          <BrowserRouter>
-            {/* Add AgentButton here so it appears on all pages */}
-            <AgentButton />
-            <Routes>
-              <Route path="/" element={<Layout />}>
-                <Route index element={<Index />} />
-                <Route path="about" element={<About />} />
-                <Route path="create" element={<CreateGift />} />
-                <Route path="claim" element={<ClaimGift />} />
-                <Route path="privacy" element={<Privacy />} />
-                <Route path="terms" element={<Terms />} />
-                <Route path="my-gift-cards" element={<MyGiftCards />} />
-                <Route path="profile" element={<ProfilePage />} />
-                <Route path="marketplace" element={<Marketplace />} />
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner position="top-center" />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
                 <Route
-                  path="marketplace/:categoryId"
-                  element={<CategoryCards />}
-                />
-                <Route
-                  path="marketplace/:categoryId/:cardId"
-                  element={<CardDetail />}
-                />
-                <Route
-                  path="create-background"
-                  element={<CreateBackground />}
-                />
-                <Route path="debug" element={<Debug />} />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <Layout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<Index />} />
+                  <Route path="about" element={<About />} />
+                  <Route path="create" element={<CreateGift />} />
+                  <Route path="claim" element={<ClaimGift />} />
+                  <Route path="privacy" element={<Privacy />} />
+                  <Route path="terms" element={<Terms />} />
+                  <Route path="my-gift-cards" element={<MyGiftCards />} />
+                  <Route
+                    path="profile"
+                    element={
+                      <ProtectedRoute>
+                        <Profile />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="marketplace" element={<Marketplace />} />
+                  <Route
+                    path="marketplace/:categoryId"
+                    element={<CategoryCards />}
+                  />
+                  <Route
+                    path="marketplace/:categoryId/:cardId"
+                    element={<CardDetail />}
+                  />
+                  <Route
+                    path="create-background"
+                    element={<CreateBackground />}
+                  />
+                  <Route path="debug" element={<Debug />} />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <AgentButton />
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
       </WalletProvider>
     </QueryClientProvider>
   </ErrorBoundary>

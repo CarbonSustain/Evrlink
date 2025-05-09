@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
-import { Link } from 'react-router-dom';
+import { Outlet, Link } from 'react-router-dom';
 import { Gift, Wallet } from 'lucide-react';
 import Navbar from './Navbar';
 import Button from './Button';
@@ -8,11 +7,13 @@ import WalletConnectDialog from './WalletConnectDialog';
 import { useWallet } from '@/contexts/WalletContext';
 import { toast } from 'react-hot-toast';
 import AccountMenu from './AccountMenu';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Layout = () => {
   const [walletDialogOpen, setWalletDialogOpen] = useState(false);
   const { address, connect } = useWallet();
   const [connecting, setConnecting] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   const handleOpenWalletDialog = () => {
     setWalletDialogOpen(true);
@@ -46,28 +47,43 @@ const Layout = () => {
           <span className="text-xl font-display font-medium bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Evrlink</span>
         </Link>
 
-        {/* Wallet Connection */}
-        <div className="flex items-center">
-          {address ? (
-            <AccountMenu address={address} />
+        {/* Wallet Connection and Auth Buttons */}
+        <div className="flex items-center gap-4">
+          {isAuthenticated ? (
+            address ? (
+              <AccountMenu address={address} />
+            ) : (
+              <Button 
+                onClick={handleOpenWalletDialog} 
+                disabled={connecting}
+                className="flex items-center gap-2"
+              >
+                {connecting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="w-4 h-4" /> 
+                    Connect Wallet
+                  </>
+                )}
+              </Button>
+            )
           ) : (
-            <Button 
-              onClick={handleOpenWalletDialog} 
-              disabled={connecting}
-              className="flex items-center gap-2"
-            >
-              {connecting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                <>
-                  <Wallet className="w-4 h-4" /> 
-                  Connect Wallet
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Link to="/login">
+                <Button variant="outline" className="text-sm">
+                  Log in
+                </Button>
+              </Link>
+              <Link to="/signup">
+                <Button className="text-sm">
+                  Sign up
+                </Button>
+              </Link>
+            </div>
           )}
         </div>
       </div>

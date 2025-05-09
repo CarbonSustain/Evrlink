@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Menu, X } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Navbar = () => {
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -49,15 +51,31 @@ const Navbar = () => {
             <NavLink to="/about" active={location.pathname === "/about"} onClick={() => setIsOpen(false)}>
               About Us
             </NavLink>
-            <NavLink to="/create" active={location.pathname === "/create"} onClick={() => setIsOpen(false)}>
-              Create Gift
-            </NavLink>
-            <NavLink to="/claim" active={location.pathname === "/claim"} onClick={() => setIsOpen(false)}>
-              Claim Gift
-            </NavLink>
-            <NavLink to="/create-background" active={location.pathname === "/create-background"} onClick={() => setIsOpen(false)}>
-              Create Background
-            </NavLink>
+            {isAuthenticated ? (
+              <>
+                <NavLink to="/create" active={location.pathname === "/create"} onClick={() => setIsOpen(false)}>
+                  Create Gift
+                </NavLink>
+                <NavLink to="/claim" active={location.pathname === "/claim"} onClick={() => setIsOpen(false)}>
+                  Claim Gift
+                </NavLink>
+                <NavLink to="/create-background" active={location.pathname === "/create-background"} onClick={() => setIsOpen(false)}>
+                  Create Background
+                </NavLink>
+                <NavLink to="/profile" active={location.pathname === "/profile"} onClick={() => setIsOpen(false)}>
+                  Profile
+                </NavLink>
+              </>
+            ) : (
+              <>
+                <NavLink to="/login" active={location.pathname === "/login"} onClick={() => setIsOpen(false)}>
+                  Log in
+                </NavLink>
+                <NavLink to="/signup" active={location.pathname === "/signup"} onClick={() => setIsOpen(false)}>
+                  Sign up
+                </NavLink>
+              </>
+            )}
           </div>
         </div>
       </nav>
