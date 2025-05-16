@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { AgentMessage, AgentRequest, AgentResponse } from "../types/agent";
-import { API_BASE_URL } from "../services/api";
+
+// In development, use localhost, in production use the API URL
+const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:3001' : import.meta.env.VITE_API_URL || 'https://api.evrlink.com';
 
 // Offline mode responses for common questions
 const OFFLINE_RESPONSES: Record<string, string> = {
@@ -11,6 +13,8 @@ const OFFLINE_RESPONSES: Record<string, string> = {
   "what is evrlink": "Evrlink is a platform that allows you to create and send digital gift cards as NFTs on the blockchain. It combines the personalization of traditional gift cards with the security and ownership benefits of blockchain technology.",
   "how do i claim a gift card": "To claim a gift card, you'll need the gift card ID and the secret code provided by the sender. Go to the 'Claim a Gift' page, enter these details, and connect your wallet to receive the gift card as an NFT.",
   "fees": "Evrlink charges minimal fees for creating and transferring gift cards. The exact fee depends on the blockchain network you're using and current gas prices. We strive to keep our platform affordable for all users.",
+  "wallet details": "In offline mode, I can only provide general information about wallets. To get your specific wallet details, please switch to online mode where I can access your connected wallet information.",
+  "help": "I can help you with information about creating gift cards, supported blockchain networks, connecting wallets, NFT backgrounds, claiming gifts, and platform fees. What would you like to know?",
   "default": "I'm currently in offline mode, but I can still help with common questions about Evrlink. You can ask about creating gift cards, supported blockchain networks, connecting wallets, backgrounds, claiming gifts, and platform fees."
 };
 
@@ -19,11 +23,23 @@ function findOfflineResponse(query: string): string {
   const normalizedQuery = query.toLowerCase().trim();
   
   // Check for exact matches first
-  if (OFFLINE_RESPONSES[normalizedQuery]) {
-    return OFFLINE_RESPONSES[normalizedQuery];
+  for (const [key, response] of Object.entries(OFFLINE_RESPONSES)) {
+    if (normalizedQuery === key) {
+      return response;
+    }
   }
   
-  // Check for partial matches
+  // Check for keyword matches
+  const keywords = normalizedQuery.split(/\s+/);
+  for (const [key, response] of Object.entries(OFFLINE_RESPONSES)) {
+    for (const word of keywords) {
+      if (word.length > 3 && key.includes(word)) {
+        return response;
+      }
+    }
+  }
+  
+  // Check for partial matches with the full query
   for (const [key, response] of Object.entries(OFFLINE_RESPONSES)) {
     if (normalizedQuery.includes(key) || key.includes(normalizedQuery)) {
       return response;
@@ -45,28 +61,39 @@ function findOfflineResponse(query: string): string {
  * @returns {Promise<string | null>} The agent's response message or `null` if an error occurs.
  */
 async function messageAgent(userMessage: string, offlineMode: boolean = false, userId: string = "default"): Promise<string | null> {
-  // If in offline mode, return a simulated response
-  if (offlineMode) {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return findOfflineResponse(userMessage);
-  }
-
   try {
-    // Use a relative URL for the chatbot endpoint so it works on both local and deployed environments
-    const chatbotUrl = "/api/agent";
+    // If in offline mode or if the message contains 'wallet details' in offline mode,
+    // return a simulated response
+    if (offlineMode || userMessage.toLowerCase().includes('wallet details')) {
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return findOfflineResponse(userMessage);
+    }
+
+    // Try to connect to the Evrlink chatbot
+    console.log('Sending message to agent:', { message: userMessage, userId });
+    const endpoint = `${API_BASE_URL}/api/agent`;
+    console.log('Agent endpoint:', endpoint);
     
-    console.log("Connecting to enhanced AgentKit chatbot at:", chatbotUrl);
-    console.log("Sending message:", userMessage);
-    console.log("User ID:", userId);
-    
-    const response = await fetch(chatbotUrl, {
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
+        "Accept": "application/json"
       },
-      // Send the message and userId in the format expected by the enhanced chatbot
-      body: JSON.stringify({ userMessage, userId } as AgentRequest),
+      body: JSON.stringify({ 
+        message: userMessage,
+        userId,
+        context: {
+          platform: "Evrlink",
+          mode: "online",
+          features: ["gift_cards", "nft_backgrounds", "wallet_management"],
+          wallet: {
+            address: process.env.REACT_APP_WALLET_ADDRESS || "",
+            network: "base-sepolia"
+          }
+        }
+      }),
     });
 
     if (!response.ok) {
@@ -74,36 +101,11 @@ async function messageAgent(userMessage: string, offlineMode: boolean = false, u
     }
 
     const data = (await response.json()) as AgentResponse;
+    console.log('Agent response:', data);
     return data.response ?? data.error ?? null;
   } catch (error) {
-    console.error("Error communicating with enhanced AgentKit chatbot:", error);
-    
-    // Try the original backend endpoint as fallback
-    try {
-      console.log("Falling back to original backend endpoint");
-      const response = await fetch(`${API_BASE_URL}/api/agent`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-        },
-        // Original backend expects 'message' instead of 'userMessage'
-        // Also include userId for user-specific wallet
-        body: JSON.stringify({ message: userMessage, userId }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = (await response.json()) as AgentResponse;
-      return data.response ?? data.error ?? null;
-    } catch (fallbackError) {
-      console.error("Error communicating with fallback agent:", fallbackError);
-      
-      // If both endpoints fail, fall back to offline mode
-      console.log("Falling back to offline mode due to network errors");
-      return findOfflineResponse(userMessage);
-    }
+    console.error("Error communicating with Evrlink chatbot:", error);
+    return findOfflineResponse(userMessage);
   }
 }
 
@@ -123,8 +125,28 @@ export function useAgent(userId: string = `user_${Math.random().toString(36).sub
   });
   
   const [isThinking, setIsThinking] = useState(false);
-  // Default to offline mode (true) since the backend API might not be available
-  const [isOfflineMode, setIsOfflineMode] = useState(true);
+  // Initialize offline mode state from localStorage if available
+  const [isOfflineMode, setIsOfflineMode] = useState(() => {
+    const savedMode = localStorage.getItem('evrlink-offline-mode');
+    return savedMode ? JSON.parse(savedMode) : false;
+  });
+
+  // Effect to handle offline mode changes
+  useEffect(() => {
+    localStorage.setItem('evrlink-offline-mode', JSON.stringify(isOfflineMode));
+    if (isOfflineMode) {
+      // Add a welcome message when switching to offline mode
+      setMessages(prev => {
+        if (prev.length === 0) {
+          return [{
+            text: "I'm now in offline mode. I can help you with common questions about Evrlink's features, gift cards, and blockchain functionality. What would you like to know?",
+            sender: "agent"
+          }];
+        }
+        return prev;
+      });
+    }
+  }, [isOfflineMode]);
 
   // Save messages to localStorage whenever they change
   useEffect(() => {
@@ -138,20 +160,29 @@ export function useAgent(userId: string = `user_${Math.random().toString(36).sub
    */
   const sendMessage = async (input: string) => {
     if (!input.trim()) return;
-
-    // Add user message to conversation
+    
+    // Add user message first
     setMessages(prev => [...prev, { text: input, sender: "user" }]);
     setIsThinking(true);
 
-    // Get response from agent (using offline mode if enabled)
-    const responseMessage = await messageAgent(input, isOfflineMode, userId);
+    try {
+      // Get response from agent (using offline mode if enabled)
+      const responseMessage = await messageAgent(input, isOfflineMode, userId);
 
-    // Add agent response to conversation if received
-    if (responseMessage) {
-      setMessages(prev => [...prev, { text: responseMessage, sender: "agent" }]);
+      // Add agent response to conversation if received
+      if (responseMessage) {
+        setMessages(prev => [...prev, { text: responseMessage, sender: "agent" }]);
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Show error message to user
+      setMessages(prev => [...prev, { 
+        text: "Sorry, I'm having trouble connecting to the server. Please try again or switch to offline mode.", 
+        sender: "agent" 
+      }]);
+    } finally {
+      setIsThinking(false);
     }
-
-    setIsThinking(false);
   };
 
   /**
@@ -167,14 +198,16 @@ export function useAgent(userId: string = `user_${Math.random().toString(36).sub
    */
   const toggleOfflineMode = () => {
     setIsOfflineMode(prev => !prev);
+    // Clear messages when toggling modes
+    setMessages([]);
   };
 
   return { 
     messages, 
     sendMessage, 
     isThinking, 
-    clearHistory,
-    isOfflineMode,
-    toggleOfflineMode
+    isOfflineMode, 
+    toggleOfflineMode,
+    setMessages
   };
 }

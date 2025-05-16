@@ -5,10 +5,11 @@ import { authLog, apiLog } from "../utils/debug";
 
 // Get API base URL from environment or use fallback with improved error handling
 export const getApiBaseUrl = () => {
-  // For development environment, use the proxy setup in vite.config.ts
+  // For development environment, use the local backend server
   if (import.meta.env.MODE === "development") {
-    console.log("Using development API proxy");
-    return ""; // Empty string will use relative URLs that go through the proxy
+    console.log("Using development backend server");
+    // Use relative URL to let the proxy handle it
+    return "";
   }
   
   // For production, use the environment variable

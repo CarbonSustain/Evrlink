@@ -12,10 +12,17 @@ export default defineConfig(({ mode }) => ({
     proxy: {
       // Proxy API requests to bypass CORS during development
       '/api': {
-        target: 'https://api.evrlink.com',
+        target: 'http://localhost:3001',
         changeOrigin: true,
-        secure: true,
+        secure: false,
+        ws: true,
         rewrite: (path) => path
+      },
+      '^/agent': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+        ws: true
       }
     }
   },
